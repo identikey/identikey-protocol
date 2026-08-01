@@ -1,0 +1,23 @@
+# IdentiKey Protocol — Licensing
+
+Copyright © 2026 Identikey Inc. (https://identikey.io)
+
+Everything in this repository is licensed under your choice of:
+
+- the [Apache License 2.0](LICENSE-APACHE), or
+- the [BSD-2-Clause Plus Patent License](LICENSE-BSD-2-CLAUSE-PATENT).
+
+Both licenses carry a mandatory patent grant with defensive termination —
+this disjunction is deliberate (unlike `MIT OR Apache-2.0`, there is no
+election a licensee can make that avoids the patent grant). Apache-2.0 is
+offered for corporate-legal familiarity; BSD-2-Clause-Patent for its
+GPLv2 compatibility.
+
+This is the *protocol tier* of the IdentiKey licensing doctrine: reference
+implementations of specifications that are meant to outlive any single
+steward. Embed them anywhere, commercially or otherwise — including in
+products that compete with ours. That is the point.
+
+Unless you explicitly state otherwise, any contribution intentionally
+submitted for inclusion in this work by you shall be licensed as above,
+without any additional terms or conditions (Apache-2.0 §5).

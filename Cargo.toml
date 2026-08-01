@@ -1,0 +1,30 @@
+[workspace]
+resolver = "2"
+members = ["crates/identikey-auth", "crates/identikey-wallet", "ikey"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0 OR BSD-2-Clause-Patent"
+repository = "https://github.com/identikey/identikey-protocol"
+
+[workspace.dependencies]
+anyhow = "1"
+argon2 = "0.5"
+base64 = "0.22"
+bc-envelope = "=0.43.0"
+blake3 = "1"
+bs58 = "0.5"
+chacha20poly1305 = "0.10"
+clap = { version = "4", features = ["derive", "env", "wrap_help"] }
+dialoguer = "0.11"
+directories = "5"
+ed25519-dalek = { version = "2.1", features = ["rand_core", "serde"] }
+keyring = { version = "3", default-features = false }
+proptest = "1"
+rand = "0.8"
+rand_core = "0.6"
+serde = { version = "1", features = ["derive"] }
+tempfile = "3"
+thiserror = "2"
+zeroize = { version = "1.7", features = ["derive"] }

@@ -1,0 +1,22 @@
+[package]
+name = "ikey"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "IdentiKey identity wallet CLI: create, manage, and select cryptographic identities"
+
+[[bin]]
+name = "ikey"
+path = "src/main.rs"
+
+[dependencies]
+identikey-wallet = { path = "../crates/identikey-wallet" }
+anyhow = { workspace = true }
+clap = { workspace = true }
+ed25519-dalek = { workspace = true }
+fips204 = "0.4"
+rand_core = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
