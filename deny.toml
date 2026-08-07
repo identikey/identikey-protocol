@@ -1,0 +1,108 @@
+# cargo-deny configuration — license policy for the PROTOCOL tier.
+#
+# This allowlist is deliberately stricter than the one in the recrypt repo,
+# because the standing rule from identikey-core's ADR-002 applies here and
+# nowhere else:
+#
+#   "The protocol tier may never take a copyleft dependency. One AGPL/MPL/GPL
+#    dep in identikey-auth collapses the permissive strategy."
+#
+# The whole point of this workspace is that its formats outlive any single
+# steward: anyone can implement, embed, or fork them, including inside GPLv2
+# firmware (which is why BSD-2-Clause-Patent is one of the two branches).
+# A single copyleft dependency takes that away, and it does so silently —
+# nothing about the build breaks, the obligation just quietly attaches.
+#
+# Neither workspace blanket-allows copyleft; both name individual crates as
+# exceptions, so the NEXT copyleft dependency fails the build in either repo.
+# What differs is the bar for granting one: recrypt's permissive crates are
+# libraries, this tier's crates are meant to be reimplemented from a spec by
+# people who owe us nothing. Grant exceptions here more reluctantly.
+#
+# Adding a licence below is a licensing decision. Make it deliberately.
+
+[graph]
+all-features = true
+# The vendored Blockchain Commons forks are patch sources with their own
+# resolution, excluded from the workspace; see the root Cargo.toml.
+
+[licenses]
+allow = [
+    "Apache-2.0",
+    # Blue Oak Model License 1.0.0 — OSI approved, permissive, carries its own
+    # express patent grant. Reaches us through the Gordian Envelope chain
+    # (minicbor -> ur -> bc-ur -> bc-components -> bc-envelope).
+    "BlueOak-1.0.0",
+    "BSD-2-Clause",
+    "BSD-2-Clause-Patent",
+    "BSD-3-Clause",
+    "BSL-1.0",
+    "CC0-1.0",
+    "ISC",
+    # Apache-2.0 WITH LLVM-exception — Apache-2.0 plus an ADDITIONAL
+    # permission (it waives the binary-redistribution notice requirement).
+    # Strictly more permissive than plain Apache-2.0, never less. Arrives via
+    # target-lexicon, a build dependency of tss-esapi-sys (the Linux TPM
+    # backend of identikey-auth).
+    "Apache-2.0 WITH LLVM-exception",
+    "MIT",
+    "MIT-0",
+    "Unicode-3.0",
+    "Unlicense",
+    "Zlib",
+]
+
+# NOT allowed, deliberately, and each omission is load-bearing:
+#   AGPL-3.0*, GPL-*, LGPL-*  — the rule above. No exceptions granted.
+#   MPL-2.0                   — kept out of `allow` so it can only enter as a
+#                               named exception. One already has; see below.
+#   CDLA-Permissive-2.0       — no data blobs belong in this tier; if one
+#                               appears, that is a design question first.
+
+confidence-threshold = 0.9
+
+# ---------------------------------------------------------------------------
+# THE STANDING RULE IS ALREADY VIOLATED. Read this before adding anything.
+#
+# ADR-002 says the protocol tier may never take a copyleft dependency. As of
+# 2026-08-07 it has one, and it arrived without anyone choosing it:
+#
+#   option-ext (MPL-2.0)
+#     <- dirs-sys <- dirs <- known-values <- bc-envelope
+#        <- identikey-log AND identikey-wallet
+#     <- directories <- identikey-wallet
+#
+# Two independent paths. The second is ours and could in principle be dropped;
+# the FIRST is not — it comes through Blockchain Commons' `known-values`, which
+# every Gordian Envelope consumer pulls, and this workspace is built on Gordian
+# Envelope by design. Bumping does not help: dirs-sys 0.5 still depends on
+# option-ext. The same dependency reaches recrypt-wire in the recrypt repo.
+#
+# Accepted with the reasoning recorded, not waved through:
+#   * MPL-2.0 is FILE-scope copyleft. The obligation attaches to the MPL files
+#     and modifications of them; using option-ext unmodified imposes nothing on
+#     identikey-* source. It is not GPL-style reciprocity across a linked work.
+#   * MPL-2.0 section 3.3 is explicitly GPL-compatible, so the GPLv2 firmware
+#     reach that BSD-2-Clause-Patent exists to preserve is NOT lost — which is
+#     the specific harm ADR-002 was written to prevent.
+#
+# So ADR-002's absolute phrasing is stricter than the legal reality. The rule
+# worth keeping is "no copyleft dependency WITHOUT a recorded exception," and
+# that is what this file implements. Tracked as ikp-a6x.
+#
+# MPL-2.0 stays OUT of `allow` above so that the next copyleft dependency
+# fails the build instead of joining this one quietly.
+# ---------------------------------------------------------------------------
+[[licenses.exceptions]]
+name = "option-ext"
+allow = ["MPL-2.0"]
+
+[bans]
+multiple-versions = "allow"
+
+[advisories]
+yanked = "warn"
+
+[sources]
+unknown-registry = "deny"
+unknown-git = "allow"
