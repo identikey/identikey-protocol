@@ -1,0 +1,57 @@
+{
+  "source": "Dreamball fixtures/goldens/manifest.json (zig build export-golden-fixtures), copied 2026-08-07",
+  "entries": [
+    {
+      "name": "action_v4_unsigned",
+      "type": "ball.action",
+      "format_version": 4,
+      "value": {
+        "kind": "worldtree.kanban-card.move",
+        "parent_hashes_hex": [
+          "1010101010101010101010101010101010101010101010101010101010101010"
+        ],
+        "actor_seed_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "actor_hex": "3b6a27bcceb6a42d62a3a8d02a6f0d73653215771de243a63ac048a18b59da29",
+        "body_hex": "820102",
+        "hlc": [
+          1700000000000,
+          7
+        ],
+        "target_fp_hex": null,
+        "timestamp": null,
+        "deps_hex": [],
+        "nacks_hex": []
+      },
+      "bytes_hex": "d8c881d8c9a763686c63821b0000018bcfe568000764626f647943820102646b696e64781a776f726c64747265652e6b616e62616e2d636172642e6d6f766564747970656b62616c6c2e616374696f6e656163746f7258203b6a27bcceb6a42d62a3a8d02a6f0d73653215771de243a63ac048a18b59da296d706172656e742d68617368657381582010101010101010101010101010101010101010101010101010101010101010106e666f726d61742d76657273696f6e04",
+      "blake3": "5b97ee37cd5fc24ee7e88c96d6613dadf9fafe4ebea5429ac328af133e2fd27b",
+      "note": "actor is the Ed25519 PUBLIC key deterministically derived from the all-zeros 32-byte seed (actor_seed_hex) via RFC 8032 keygen -- a PUBLIC, shared test vector, not a secret. Any RFC-8032-compliant implementation (including bc-envelope's Rust Ed25519 stack) must re-derive the identical actor and, for the signed variant, the identical deterministic signature over the unsigned bytes."
+    },
+    {
+      "name": "action_v4_signed",
+      "type": "ball.action",
+      "format_version": 4,
+      "value": {
+        "kind": "worldtree.kanban-card.move",
+        "parent_hashes_hex": [
+          "1010101010101010101010101010101010101010101010101010101010101010"
+        ],
+        "actor_seed_hex": "0000000000000000000000000000000000000000000000000000000000000000",
+        "actor_hex": "3b6a27bcceb6a42d62a3a8d02a6f0d73653215771de243a63ac048a18b59da29",
+        "body_hex": "820102",
+        "hlc": [
+          1700000000000,
+          7
+        ],
+        "signatures": [
+          {
+            "alg": "ed25519",
+            "value_hex": "9c6046ab78bebcb744ed214fa0e44f362e0853a15360c8c781458230058f1aaa771da72aaeb20e95a35cf42c0a0188e7bcc257710220306d30b9202d72bbde03"
+          }
+        ]
+      },
+      "bytes_hex": "d8c882d8c9a763686c63821b0000018bcfe568000764626f647943820102646b696e64781a776f726c64747265652e6b616e62616e2d636172642e6d6f766564747970656b62616c6c2e616374696f6e656163746f7258203b6a27bcceb6a42d62a3a8d02a6f0d73653215771de243a63ac048a18b59da296d706172656e742d68617368657381582010101010101010101010101010101010101010101010101010101010101010106e666f726d61742d76657273696f6e0482667369676e656482676564323535313958409c6046ab78bebcb744ed214fa0e44f362e0853a15360c8c781458230058f1aaa771da72aaeb20e95a35cf42c0a0188e7bcc257710220306d30b9202d72bbde03",
+      "blake3": "3c7a55d8f4b8012d054a572057e042fe764c314aead95b28d972cfdcb12a8c7f",
+      "note": "actor is the Ed25519 PUBLIC key deterministically derived from the all-zeros 32-byte seed (actor_seed_hex) via RFC 8032 keygen -- a PUBLIC, shared test vector, not a secret. Any RFC-8032-compliant implementation (including bc-envelope's Rust Ed25519 stack) must re-derive the identical actor and, for the signed variant, the identical deterministic signature over the unsigned bytes."
+    }
+  ]
+}

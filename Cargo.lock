@@ -1205,6 +1205,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "identikey-log"
+version = "0.1.0"
+dependencies = [
+ "bc-envelope",
+ "blake3",
+ "dcbor",
+ "ed25519-dalek",
+ "fips204",
+ "thiserror 2.0.19",
+]
+
+[[package]]
 name = "identikey-wallet"
 version = "0.1.0"
 dependencies = [

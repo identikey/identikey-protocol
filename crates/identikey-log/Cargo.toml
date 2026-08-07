@@ -1,0 +1,38 @@
+[package]
+name = "identikey-log"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Signed, actor-attributed, content-addressed, causally-ordered append-only op log (ball.action v4 wire format)"
+
+[dependencies]
+# Deterministic CBOR — the Blockchain Commons reference dCBOR codec. This crate
+# does NOT hand-roll CBOR; every byte on the wire comes out of `dcbor`.
+dcbor = "=0.25.2"
+# Classical signatures. Pinned to the 2.x line that identikey-auth and recrypt
+# already use — do not diverge to 3.x.
+ed25519-dalek = { workspace = true }
+# content_hash = blake3(canonical unsigned envelope bytes)
+blake3 = { workspace = true }
+thiserror = { workspace = true }
+
+# Post-quantum (FIPS 204 / ML-DSA-87) verification, behind a one-function seam.
+# Optional so the classical-only build stays small (this crate is destined for
+# wasm32-unknown-unknown).
+fips204 = { version = "0.4.6", optional = true }
+
+[features]
+default = []
+ml-dsa = ["dep:fips204"]
+
+[dev-dependencies]
+# Used ONLY by tests/envelope_interop.rs, which characterises how the
+# Gordian Envelope reference implementation encodes the same logical value.
+# default-features = false + [signature, ed25519] is the feature subset the
+# wasm32 build requires (bc-envelope 0.43 enables pqcrypto/secp256k1/ssh/sskr
+# by default, none of which build for wasm32-unknown-unknown).
+bc-envelope = { version = "=0.43.0", default-features = false, features = [
+    "signature",
+    "ed25519",
+] }

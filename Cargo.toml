@@ -1,6 +1,11 @@
 [workspace]
 resolver = "2"
-members = ["crates/identikey-auth", "crates/identikey-wallet", "ikey"]
+members = [
+    "crates/identikey-auth",
+    "crates/identikey-log",
+    "crates/identikey-wallet",
+    "ikey",
+]
 
 [workspace.package]
 version = "0.1.0"
