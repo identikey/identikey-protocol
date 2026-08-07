@@ -6,6 +6,36 @@ members = [
     "crates/identikey-wallet",
     "ikey",
 ]
+# The vendored Blockchain Commons forks are *patch* sources, not members: they
+# must build with their own upstream dependency resolution, and they are meant
+# to be deleted wholesale when upstream ships the fixes.
+exclude = [
+    "vendor/bc-shamir",
+    "vendor/dcbor",
+]
+
+# ---------------------------------------------------------------------------
+# Vendored upstream forks — see vendor/*/VENDOR.md for the one-line diffs,
+# the measurements, and the deletion criteria.
+#
+# Both are prerequisites for building anything Gordian-based for
+# wasm32-unknown-unknown:
+#   bc-shamir 0.13.0 — force-enables bc-crypto/secp256k1 (C, no wasm32).
+#                      BlockchainCommons/bc-shamir-rust#4
+#   dcbor     0.25.2 — chrono default features pull wasmbind → wasm-bindgen,
+#                      which breaks the one-host-import invariant.
+#                      BlockchainCommons/bc-dcbor-rust#6
+#
+# DEBT, RECORDED DELIBERATELY: these two directories are byte-for-byte
+# duplicates of `vendor/bc-shamir` and `vendor/dcbor` in the Dreamball repo.
+# A cross-repo relative path would be fragile to commit, so both repositories
+# carry their own copy. When the upstream issues above are merged and
+# released, BOTH copies and BOTH [patch.crates-io] blocks are deleted
+# together — see vendor/DUPLICATION.md.
+# ---------------------------------------------------------------------------
+[patch.crates-io]
+bc-shamir = { path = "vendor/bc-shamir" }
+dcbor = { path = "vendor/dcbor" }
 
 [workspace.package]
 version = "0.1.0"

@@ -1,6 +1,8 @@
 //! The op itself: a signed, actor-attributed, content-addressed, causally
 //! ordered, DAG-linked record with an opaque typed body.
 
+use bc_components::Signature;
+
 use crate::{
     error::{LogError, Result},
     hlc::Hlc,
@@ -18,45 +20,12 @@ pub const OP_TYPE: &str = "ball.action";
 /// The only `format-version` this implementation speaks.
 pub const FORMAT_VERSION: u64 = 4;
 
-/// Signature algorithms carried in a `signed` attribute.
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub enum SigAlg {
-    /// Ed25519, RFC 8032. Verified against the op's `actor`.
-    Ed25519,
-    /// ML-DSA-87, FIPS 204 **pure** mode with the empty context string.
-    MlDsa87,
-}
-
-impl SigAlg {
-    pub fn tag(self) -> &'static str {
-        match self {
-            SigAlg::Ed25519 => "ed25519",
-            SigAlg::MlDsa87 => "ml-dsa-87",
-        }
-    }
-
-    pub fn from_tag(tag: &str) -> Result<Self> {
-        match tag {
-            "ed25519" => Ok(SigAlg::Ed25519),
-            "ml-dsa-87" => Ok(SigAlg::MlDsa87),
-            other => Err(LogError::UnknownAlg(other.to_string())),
-        }
-    }
-}
-
-/// One `signed` attribute: `[alg, value]`.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct Signature {
-    pub alg: SigAlg,
-    pub value: Vec<u8>,
-}
-
 /// An unsigned op.
 ///
-/// The first seven fields are the **core map** — the load-bearing, always
-/// present anchors that `content_hash` covers. The last four are
-/// **attributes**: optional, repeatable, and (by the envelope convention this
-/// format inherits) elidable descriptive metadata.
+/// The first five fields are the **subject** — the core map, the load-bearing
+/// anchors that are always present. The last four become Gordian
+/// **assertions**: optional, repeatable, individually digested, and therefore
+/// individually elidable without invalidating a signature.
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct Op {
     /// Open UTF-8 kind string; `<namespace>.<noun>.<verb>` by convention
@@ -72,14 +41,14 @@ pub struct Op {
     pub actor: Hash32,
     /// DAG parent `content_hash`es.
     pub parent_hashes: Vec<Hash32>,
-    /// Additional causal dependencies (attribute, repeatable).
+    /// Additional causal dependencies (assertion, repeatable).
     pub deps: Vec<Hash32>,
-    /// Negative acknowledgements (attribute, repeatable).
+    /// Negative acknowledgements (assertion, repeatable).
     pub nacks: Vec<Hash32>,
-    /// Optional target fingerprint (attribute).
+    /// Optional target fingerprint (assertion).
     pub target_fp: Option<Hash32>,
     /// Optional wall-clock timestamp, seconds since the epoch, encoded as a
-    /// CBOR `#6.1` tagged integer (attribute). Advisory only — `hlc` is the
+    /// CBOR `#6.1` tagged integer (assertion). Advisory only — `hlc` is the
     /// ordering authority.
     pub timestamp: Option<u64>,
 }
@@ -128,20 +97,43 @@ impl Op {
     }
 }
 
-/// An op plus zero or more detached signatures.
+/// An op plus zero or more signatures.
 ///
-/// Signatures are **not** part of the bytes that are signed or hashed: a
-/// verifier strips them and re-encodes the unsigned form. That is what makes
-/// `content_hash` stable as signatures are added by additional authors.
-#[derive(Clone, Debug, PartialEq, Eq)]
+/// Signatures live on the **wrapper** around the unsigned envelope, so they
+/// are not part of what they themselves cover, and `content_hash` — which is
+/// taken over the unsigned form — is stable as signatures are added by
+/// additional authors.
+///
+/// [`Signature`] is `bc_components::Signature`: a tagged, self-describing
+/// object that names its own scheme. This crate no longer carries an algorithm
+/// tag of its own; there is nothing left for one to disambiguate.
+#[derive(Clone, Debug, PartialEq)]
 pub struct SignedOp {
     pub op: Op,
+    /// The signatures on the wrapper, as a `Vec` for convenience but a **set**
+    /// in fact: Gordian orders assertions by digest, so a decoded op returns
+    /// its signatures in digest order and the author's insertion order is not
+    /// recoverable from the bytes. Nothing should depend on the order.
     pub signatures: Vec<Signature>,
+    /// How many assertions were **elided** in the envelope this was decoded
+    /// from. Zero for anything this crate encoded.
+    ///
+    /// Elision is not an error: a partially-redacted op is still verifiable,
+    /// which is the entire reason the format is Gordian Envelope. But it is
+    /// also not invisible — a decoded op with `elided > 0` is missing
+    /// assertions the author put there, and re-encoding it will not reproduce
+    /// the bytes it came from.
+    pub elided: usize,
 }
 
 impl SignedOp {
-    pub fn new(op: Op, signatures: Vec<Signature>) -> Self { Self { op, signatures } }
+    pub fn new(op: Op, signatures: Vec<Signature>) -> Self {
+        Self { op, signatures, elided: 0 }
+    }
 
     /// Is there at least one signature? An op with none is untrusted input.
     pub fn is_signed(&self) -> bool { !self.signatures.is_empty() }
+
+    /// Were any assertions redacted out of the envelope this came from?
+    pub fn has_elisions(&self) -> bool { self.elided > 0 }
 }

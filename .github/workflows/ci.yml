@@ -1,0 +1,76 @@
+# Minimal CI for identikey-protocol.
+#
+# This repository had no CI at all before Dreamball-y4t.20. What is here is
+# deliberately the smallest thing that would have caught that bug plus the
+# obvious hygiene around it — not an invented pipeline. Add to it when there is
+# a specific regression worth gating, not speculatively.
+#
+# The `wasm32` job is the one with a story: identikey-log built for
+# wasm32-unknown-unknown, then stopped, and the change was reported as a
+# simplification. Nothing noticed, because nothing was watching. World-Tree is
+# local-first multiplayer in the browser, so the op-log crate is precisely the
+# one that has to run there.
+
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+  # Deliberately NOT setting RUSTFLAGS here. A `RUSTFLAGS` env var *replaces*
+  # `target.*.rustflags` from `.cargo/config.toml` rather than merging with it,
+  # which would silently drop `--cfg getrandom_backend="custom"` and break the
+  # wasm32 job in a thoroughly confusing way.
+
+jobs:
+  test:
+    name: test (native)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --workspace --all-targets
+      - run: cargo test --workspace
+      # The PQ feature is native-only by construction, so it is only ever
+      # exercised here. Both configurations must pass: `pqcrypto` changes which
+      # `Signature` variants exist, which changes what decodes.
+      - run: cargo test -p identikey-log --features pqcrypto
+      - run: cargo clippy -p identikey-log --all-targets
+      - run: cargo clippy -p identikey-log --all-targets --features pqcrypto
+
+  wasm32:
+    name: wasm32-unknown-unknown (one host import)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      # binaryen provides wasm-dis; the gate script also accepts wabt's
+      # wasm-objdump if you would rather install that.
+      - run: sudo apt-get update && sudo apt-get install -y binaryen
+      # Builds identikey-log for the browser target and asserts the module
+      # declares exactly one import, env.getRandomBytes. See the script header
+      # for why the count, and not merely the exit code, is the assertion.
+      - run: ./scripts/check-wasm-imports.sh release
+
+      # Negative control. `--features pqcrypto` MUST NOT build for wasm32:
+      # pqcrypto-mldsa is a PQClean C binding whose sources need a hosted
+      # stdlib. If this step ever starts succeeding, upstream has shipped a
+      # no-std wasm path and the whole fips204 seam can be revisited — that is
+      # good news, and this failing step is how we would find out.
+      - name: pqcrypto must NOT build for wasm32
+        run: |
+          if cargo build -p identikey-log --features pqcrypto \
+               --target wasm32-unknown-unknown 2>/dev/null; then
+            echo "::error::pqcrypto now builds for wasm32 — re-read docs/pq-and-wasm.md"
+            exit 1
+          fi
+          echo "OK: pqcrypto still cannot target wasm32, as documented."

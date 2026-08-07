@@ -23,8 +23,19 @@
 //! actor          <32-byte Ed25519 public key>   who
 //! parent-hashes  [<32 bytes>, ...]              what this came after
 //! content_hash   blake3(canonical bytes)        the op's identity
-//! signed         [alg, signature]               attached, detached, plural
+//! 'signed'       Signature                      attached, plural, elision-safe
 //! ```
+//!
+//! ## It is a Gordian Envelope
+//!
+//! Not envelope-*shaped* — an actual `bc_envelope::Envelope`. The core map is
+//! the subject, the optional metadata are real assertions, and a signature
+//! covers the wrapped subject's SHA-256 digest tree rather than a literal byte
+//! string. That last point is the whole reason (Dreamball-y4t.16): a signature
+//! over a digest tree **survives elision**, so a partially redacted op is
+//! still verifiable by anyone holding the author's key. An op log that cannot
+//! hand out a redacted-but-verifiable slice of itself is missing the feature
+//! it most wants.
 //!
 //! ## Quick start
 //!
@@ -52,11 +63,14 @@
 //!
 //! ## Guarantees, and their edges
 //!
-//! * **Deterministic bytes.** Encoding is dCBOR; the same logical op always
-//!   produces the same bytes in any conformant implementation. The golden
-//!   vectors in `tests/goldens.rs` are the gate.
-//! * **Signatures cover the unsigned bytes**, not the signed envelope, so
-//!   co-signing is additive and `content_hash` is stable.
+//! * **Deterministic bytes.** Encoding is dCBOR and Gordian orders assertions
+//!   by digest; the same logical op always produces the same bytes in any
+//!   conformant implementation. The golden vectors in `tests/goldens.rs` are
+//!   the gate.
+//! * **Signatures cover the wrapped unsigned envelope**, not the signed one,
+//!   so co-signing is additive and `content_hash` is stable.
+//! * **Elision preserves signatures; substitution does not.** Proven, not
+//!   asserted — see `tests/elision.rs`.
 //! * **The body is opaque.** This crate checks that it is canonical CBOR and
 //!   otherwise does not look inside. Typing the body is the consumer's job.
 //! * **Concurrency is surfaced, not resolved.** Two ops with identical `hlc`
@@ -70,10 +84,22 @@ pub mod hlc;
 pub mod op;
 pub mod sign;
 
-pub use codec::{content_hash, decode, encode, encode_signed};
+// The browser host seam: the `env.getRandomBytes` import both getrandom majors
+// are routed to, plus the minimal exports that make the wasm CI gate check a
+// linked module rather than an empty one.
+#[cfg(target_arch = "wasm32")]
+pub mod wasm;
+
+pub use bc_components::Signature;
+pub use bc_envelope::Envelope;
+pub use codec::{
+    content_hash, decode, encode, encode_signed, from_envelope, to_envelope,
+    to_signed_envelope,
+};
 pub use error::{LogError, Result};
 pub use hlc::Hlc;
-pub use op::{Hash32, Op, SigAlg, Signature, SignedOp, FORMAT_VERSION, OP_TYPE};
+pub use op::{Hash32, Op, SignedOp, FORMAT_VERSION, OP_TYPE};
 pub use sign::{
-    decode_and_verify, verify, verify_ed25519, verify_ml_dsa_87, verify_with_pq_key, Author,
+    actor_key, decode_and_verify, signatures_of, verify, verify_envelope,
+    verify_envelope_with_pq_key, verify_ml_dsa_87, verify_with_pq_key, Author,
 };

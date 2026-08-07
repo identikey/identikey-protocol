@@ -1,0 +1,10 @@
+# getrandom 0.3 selects its entropy source at *compile* time via this cfg.
+# `custom` means "the crate defines `__getrandom_v03_custom`" — see
+# `crates/identikey-log/src/wasm.rs`, which routes it (and getrandom 0.2's
+# `register_custom_getrandom!`) to the single `env.getRandomBytes` host import.
+#
+# The alternative, `getrandom_backend="wasm_js"`, would re-introduce
+# wasm-bindgen and js-sys and break the one-host-import invariant that
+# `vendor/dcbor` exists to preserve. Do not switch to it.
+[target.wasm32-unknown-unknown]
+rustflags = ['--cfg', 'getrandom_backend="custom"']

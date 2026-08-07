@@ -4,35 +4,109 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
-description = "Signed, actor-attributed, content-addressed, causally-ordered append-only op log (ball.action v4 wire format)"
+description = "Signed, actor-attributed, content-addressed, causally-ordered append-only op log on Gordian Envelope"
+
+[lib]
+# `cdylib` alongside `rlib` so that `cargo build -p identikey-log --target
+# wasm32-unknown-unknown` produces an actual `.wasm` module. Without it the
+# wasm build emits an rlib, nothing is linked, and the CI gate could not check
+# the thing that actually matters — the module's *import section*. See
+# `src/wasm.rs`.
+crate-type = ["rlib", "cdylib"]
 
 [dependencies]
-# Deterministic CBOR — the Blockchain Commons reference dCBOR codec. This crate
-# does NOT hand-roll CBOR; every byte on the wire comes out of `dcbor`.
+# Gordian Envelope — the container, the digest tree, the signature semantics.
+# This crate does NOT define an envelope format; it defines a *profile* of
+# Gordian Envelope (which subject shape and which predicates mean what).
+#
+# Feature set, and why each one is here (Dreamball-y4t.18):
+#   signature   — `'signed': Signature` assertions; the whole point.
+#   ed25519     — the classical scheme `actor` names (a raw Ed25519 public key).
+#   known_value — `'signed'` is a KNOWN VALUE (small integer), not the text
+#                 string "signed". Implied by `signature`, named explicitly
+#                 because the wire format depends on it.
+#   salt        — `add_salt()` on assertions, so eliding a low-entropy
+#                 assertion does not leak its content to a dictionary attack.
+#                 PROTOCOL.md has promised salted elidable attributes since
+#                 before there was any code that could deliver them.
+#   proof       — inclusion proofs (`proof_contains_target` /
+#                 `confirm_contains_target`): hand someone one assertion out of
+#                 an op and let them check it against a root digest.
+#
+# NOT enabled by default: `pqcrypto`. It is reachable through the optional
+# `pqcrypto` feature of *this* crate, and it is native-only. See [features].
+#
+# `default-features = false` because bc-envelope's defaults also pull in
+# secp256k1, ssh, sskr, compression and the expression language, none of which
+# this profile uses — and secp256k1 and pqcrypto are both C, so both of them
+# are hard blockers on wasm32-unknown-unknown, not merely bloat.
+bc-envelope = { version = "=0.43.0", default-features = false, features = [
+    "ed25519",
+    "known_value",
+    "proof",
+    "salt",
+    "signature",
+] }
+# The tagged `Signature`, `Digest`, and Ed25519 key types Envelope carries.
+bc-components = { version = "=0.31.1", default-features = false, features = [
+    "ed25519",
+] }
+# Deterministic CBOR, for the opaque body's canonicality check and the core
+# map. Re-exported by bc-envelope's prelude; named here because this crate
+# builds `dcbor::Map` values directly.
 dcbor = "=0.25.2"
-# Classical signatures. Pinned to the 2.x line that identikey-auth and recrypt
-# already use — do not diverge to 3.x.
-ed25519-dalek = { workspace = true }
 # content_hash = blake3(canonical unsigned envelope bytes)
 blake3 = { workspace = true }
 thiserror = { workspace = true }
 
-# Post-quantum (FIPS 204 / ML-DSA-87) verification, behind a one-function seam.
-# Optional so the classical-only build stays small (this crate is destined for
-# wasm32-unknown-unknown).
-fips204 = { version = "0.4.6", optional = true }
+# Post-quantum (FIPS 204 / ML-DSA-87) verification, behind a one-function seam
+# (`sign::verify_ml_dsa_87`). Pure Rust, `no_std`-capable, and — the entire
+# reason it is here rather than pqcrypto-mldsa — it builds for
+# wasm32-unknown-unknown. Chosen in Dreamball-y4t.2 on measured evidence.
+#
+# NOT optional. The seam is cheap (≈14 KB raw / ≈6.7 KB gzip on wasm) and a
+# browser build that could not check a PQ signature at all would be a worse
+# outcome than the size.
+fips204 = "0.4.6"
+
+# --- wasm32 entropy plumbing -----------------------------------------------
+# The dependency graph pulls TWO getrandom majors and both must be satisfied,
+# or the wasm build does not compile at all (Dreamball-69h):
+#   0.3 — via bc-rand / rand_core 0.9
+#   0.2 — via chacha20poly1305's default `getrandom` feature → aead →
+#         crypto-common → rand_core 0.6
+# They are declared here, rather than left to transitive resolution, for two
+# reasons: getrandom 0.2 hard-`compile_error!`s on this target unless a backend
+# feature is on, and the feature must be enabled by a crate in *this* graph for
+# `cargo build -p identikey-log` alone to succeed.
+#
+# `custom`, never `js`: `js` re-imports wasm-bindgen and would undo the
+# vendor/dcbor patch. Both are routed to one host import in `src/wasm.rs`.
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+getrandom_02 = { package = "getrandom", version = "0.2", features = ["custom"] }
+getrandom_03 = { package = "getrandom", version = "0.3" }
 
 [features]
 default = []
-ml-dsa = ["dep:fips204"]
 
-[dev-dependencies]
-# Used ONLY by tests/envelope_interop.rs, which characterises how the
-# Gordian Envelope reference implementation encodes the same logical value.
-# default-features = false + [signature, ed25519] is the feature subset the
-# wasm32 build requires (bc-envelope 0.43 enables pqcrypto/secp256k1/ssh/sskr
-# by default, none of which build for wasm32-unknown-unknown).
-bc-envelope = { version = "=0.43.0", default-features = false, features = [
-    "signature",
-    "ed25519",
-] }
+# Blockchain Commons' own post-quantum support: `Signature::MLDSA(..)`,
+# `SigningPublicKey::MLDSA(..)`, ML-DSA key generation and *signing*.
+#
+# OFF BY DEFAULT AND NATIVE-ONLY, and this is a hard constraint rather than a
+# preference. `bc-components/pqcrypto` pulls `pqcrypto-mldsa`, which is a
+# PQClean **C** binding; rustpq's own WASM.md documents that those routines
+# need a stdlib and cannot build as pure no-std wasm, and Dreamball-y4t.2
+# reproduced exactly that (`stdlib.h` not found, under both Apple clang and
+# `zig cc -target wasm32-freestanding-none`). Turning this on for a wasm build
+# does not degrade it; it breaks it.
+#
+# What you lose with it off, precisely — see `docs/pq-and-wasm.md`:
+#   * ML-DSA key generation and signing: gone. This crate never had them
+#     anyway; `Author` is Ed25519-only.
+#   * `Signature::MLDSA` *parsing*: gone, because bc-components gates the enum
+#     variant itself. A PQ-signed op therefore fails to DECODE, not merely to
+#     verify. That is an interop split between runtimes and it is the reason
+#     `LogError::PqUnavailable` exists as a distinct, named error.
+#   * ML-DSA-87 *verification*: NOT lost. `sign::verify_ml_dsa_87` is fips204
+#     and is always compiled.
+pqcrypto = ["bc-envelope/pqcrypto", "bc-components/pqcrypto"]

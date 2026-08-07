@@ -6,6 +6,9 @@ pub enum LogError {
     #[error("cbor: {0}")]
     Cbor(String),
 
+    #[error("envelope: {0}")]
+    Envelope(String),
+
     #[error("missing field: {0}")]
     MissingField(&'static str),
 
@@ -30,8 +33,8 @@ pub enum LogError {
     #[error("body is not canonical (deterministic) CBOR")]
     NonCanonicalBody,
 
-    #[error("unknown signature algorithm: {0}")]
-    UnknownAlg(String),
+    #[error("unrecognised assertion predicate: {0}")]
+    UnknownPredicate(String),
 
     #[error("invalid {0} key bytes")]
     InvalidKey(&'static str),
@@ -45,15 +48,38 @@ pub enum LogError {
     #[error("op carries no signatures — treat as untrusted input")]
     Unsigned,
 
-    #[error("post-quantum verification requested but the `ml-dsa` feature is not enabled")]
-    PqUnavailable,
-
     #[error("post-quantum signature present with no public key to check it against")]
     PqDangling,
+
+    /// A `'signed'` assertion carries a `#6.40105` ML-DSA signature, but this
+    /// build cannot represent one.
+    ///
+    /// This is the honest name for a real interop split, not a stub. The
+    /// `Signature::MLDSA` enum variant in `bc-components` is gated behind
+    /// `bc-components/pqcrypto`, which pulls a PQClean **C** dependency and
+    /// therefore cannot exist in a wasm build. Gating an enum *variant*
+    /// removes the ability to PARSE the value, not merely to verify it — so a
+    /// default/wasm build rejects a PQ-signed op at decode time.
+    ///
+    /// Note what is *not* covered by this error: `sign::verify_ml_dsa_87` is
+    /// fips204 and is compiled in every configuration. The missing capability
+    /// is bc-components' tagged-`Signature` representation, not the maths.
+    #[error(
+        "op carries an ML-DSA signature, which this build cannot decode: \
+         rebuild with the `pqcrypto` feature (native targets only)"
+    )]
+    PqUnavailable,
+
+    #[error("ML-DSA level {0} is not supported (this seam implements ML-DSA-87 only)")]
+    PqUnsupportedLevel(u64),
 }
 
 pub type Result<T> = core::result::Result<T, LogError>;
 
 impl From<dcbor::Error> for LogError {
     fn from(e: dcbor::Error) -> Self { LogError::Cbor(e.to_string()) }
+}
+
+impl From<bc_envelope::Error> for LogError {
+    fn from(e: bc_envelope::Error) -> Self { LogError::Envelope(e.to_string()) }
 }
