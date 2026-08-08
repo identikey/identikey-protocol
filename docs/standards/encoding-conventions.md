@@ -104,13 +104,23 @@ benefit is available, not yet taken.
 
 ### 5.1 Tagged-input convention
 
-Endpoints that accept multi-KB blobs over JSON accept input strings tagged with their encoding:
+Blobs crossing a JSON boundary are tagged with their encoding. **`b64:<base64>` is the only accepted form**, in both directions.
 
-- `b64:<base64>` — preferred
-- `b58:<base58>` — accepted for backward compatibility
-- bare string with no prefix — treated as base58 (legacy pre-2026 clients)
+```
+b64:<base64>
+```
 
-Outputs always emit `b64:<base64>`. Clients that previously stripped a `b58:` prefix must be updated to also handle `b64:`. This applies today to `/sign/ml-dsa`, `/verify/ml-dsa`, and the `root_pk` / `signatures` fields of `KeyspaceDocJson`.
+**Removed 2026-08-07:** the `b58:<base58>` tag, and the bare unprefixed string previously "treated as base58 for pre-2026 clients". Nothing had shipped to production, so there was no compatibility to preserve — and both were *unbounded base58 decode paths reachable from untrusted input*. `/sign/ml-dsa` is public and unauthenticated by design (the secret key is the authority, so requiring auth would be tautological), and its payloads are multi-KB. Accepting base58 there meant anonymous callers could drive quadratic work. That is a denial-of-service shape, not merely a slow path.
+
+Decoders MUST reject an untagged string rather than guessing. The error should name the required form: a caller sending the old shape needs to know what to send, not just that it failed.
+
+Applies to `/sign/ml-dsa`, `/verify/ml-dsa`, and the `root_pk` / `signatures` fields of `KeyspaceDocJson`.
+
+### 5.1.1 Enforce the size split in code, not in prose
+
+Base58 is O(n²). This document has said so since 2026-04-27 and Recrypt still hit it three times (§5.2). Prose does not prevent the fourth.
+
+Implementations SHOULD expose base58 only through a function that **refuses** input over the 256-byte bound and returns an error naming base64, with no unchecked escape hatch. Recrypt does this in `recrypt_wire::encoding` (`b58_encode` / `b58_decode`, `B58_MAX_BYTES`); every call site inherits the guard instead of re-deriving it. Where a value's type already fixes its length (`[u8; 32]` fingerprints, digests, keyspace IDs), the type is the proof and a runtime check adds nothing.
 
 ### 5.2 Historical fixes
 
