@@ -210,6 +210,34 @@ macOS note: Secure-Enclave keys require the binary to be **code-signed with a ke
 entitlement** (Papyrus already ships a Developer-ID + hardened-runtime build; this adds one entitlement).
 Unsigned dev builds fall back to the software signer.
 
+## 8.1 Claimant roles — same bytes, two signers
+
+The wire format does **not** encode custody. A `Response` proves that
+*some* private key signed this `Challenge`. Who held that key is out
+of band:
+
+- **Self-custody (C3/C4).** The claimant is the user's wallet. The
+  wallet is the `Signer`.
+- **Managed custody (C1/C2).** The claimant is the custody operator,
+  signing with the managed key **after** an access credential
+  authorised that use (A3 WebAuthn, or a *user-held* A4 Response).
+  The operator's Sign over the Challenge is **not** the consent
+  artifact. Consent is the access credential. A log of the operator's
+  own Sign would be self-certifying theatre.
+
+A verifier of these bytes MUST treat the two identically: decode,
+check `aud` / nonce / expiry, verify the signature, bind the
+fingerprint. Inferring a custody rung from a `Response` is a protocol
+error.
+
+How a `Response` is carried to an OpenID Provider is specified in
+[`identikey-oidc-urn-grant-v1.md`](identikey-oidc-urn-grant-v1.md).
+That document is transport. This one is the proof.
+
+This protocol is a **possession proof**, not an authorization server
+and not a capability envelope. `aud` scopes the proof to a service.
+Delegation / UCAN-style capabilities stay out of v1 (§9, §11).
+
 ## 9. What we kept vs. cut from SIWE / CAIP-122
 
 **Kept (the irreducible secure core):** audience (`aud`), server-issued `nonce`, `iat`/`exp` validity
