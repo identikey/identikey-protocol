@@ -6,6 +6,12 @@ license.workspace = true
 repository.workspace = true
 description = "IdentiKey hardware-enclave-backed challenge/response authentication protocol"
 
+[features]
+default = []
+# Platform TPM / Secure Enclave signers. Off by default so a verifier
+# (identikey-oidc) does not pull tss-esapi on Linux CI.
+enclave = []
+
 [dependencies]
 # Classical signatures
 ed25519-dalek = { workspace = true }
@@ -37,7 +43,7 @@ windows = { version = "0.62", features = [
 sha2 = "0.10"
 
 # Linux TPM 2.0 backend via the tpm2-tss ESAPI. System deps: tpm2-tss (libtss2-*).
-[target.'cfg(target_os = "linux")'.dependencies]
+[target.'cfg(all(target_os = "linux", feature = "enclave"))'.dependencies]
 tss-esapi = "7.7"
 sha2 = "0.10"
 

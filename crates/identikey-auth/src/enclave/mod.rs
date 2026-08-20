@@ -12,12 +12,12 @@
 pub mod macos;
 #[cfg(target_os = "windows")]
 pub mod windows;
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", feature = "enclave"))]
 pub mod linux;
 
 #[cfg(target_os = "macos")]
 pub use macos::{SecureEnclaveEd25519Signer, SecureEnclaveSigner};
 #[cfg(target_os = "windows")]
 pub use windows::TpmSigner;
-#[cfg(target_os = "linux")]
+#[cfg(all(target_os = "linux", feature = "enclave"))]
 pub use linux::TpmSigner;
