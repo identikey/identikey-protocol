@@ -118,6 +118,8 @@ verified here like any other.
 ## 7. What this spec is not
 
 - Not WebAuthn, not passkeys, not `/authorize`.
-- Not a capability / UCAN envelope (`identikey-storage-auth`).
+- Not a capability envelope. Agency tokens are Biscuit
+  ([`identikey-capability-v1.md`](identikey-capability-v1.md)). Recrypt
+  storage-auth envelopes stay data-access, not this grant.
 - Not a requirement that every RP speak dCBOR.
 - Not a required OIDF profile. Basic OP remains authorization-code.

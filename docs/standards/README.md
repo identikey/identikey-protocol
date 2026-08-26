@@ -7,7 +7,8 @@ can safely reimplement.
 
 | Spec | Specifies | Implemented by |
 |---|---|---|
-| [`identikey-auth-challenge-v1.md`](identikey-auth-challenge-v1.md) | Audience-bound nonce challenge/response, cipher-agile, CBOR wire form. Same bytes for wallet signer and managed-custody operator. | [`identikey-auth`](../../crates/identikey-auth) |
+| [`identikey-auth-challenge-v1.md`](identikey-auth-challenge-v1.md) | Audience-bound nonce challenge/response, cipher-agile, CBOR wire form. Same bytes for wallet signer and managed-custody operator. Possession proof, not a grant. | [`identikey-auth`](../../crates/identikey-auth) |
+| [`identikey-capability-v1.md`](identikey-capability-v1.md) | Agency capability tokens: Biscuit, Ed25519 authority, monotonic attenuation. Identity is how you mint; Recrypt PRE is data access. | First profile: Mjolnir (`rbac-design.md`). No crate in this workspace yet. |
 | [`identikey-oidc-urn-grant-v1.md`](identikey-oidc-urn-grant-v1.md) | How that `Response` is carried on OAuth `POST /token` (`urn:identikey:params:oauth:grant-type:challenge-response`) | `identikey-oidc` in identikey-core (product) |
 | [`identikey-auth-platform-backends.md`](identikey-auth-platform-backends.md) | Engineering notes for `Signer` backends against hardware key stores (Secure Enclave, TPM 2.0) | [`identikey-auth`](../../crates/identikey-auth) |
 | [`wallet-envelope-format.md`](wallet-envelope-format.md) | The `IKEYW` wallet container: Gordian Envelope layout, encryption shell, unknown-assertion preservation | [`identikey-wallet`](../../crates/identikey-wallet) |

@@ -210,7 +210,7 @@ These assertions can be added later without a format-version bump (additive chan
 | Future assertion       | Type            | Purpose                                                |
 |------------------------|-----------------|--------------------------------------------------------|
 | `"keyspace-membership"` | nested envelope | Track which keyspaces this identity belongs to         |
-| `"delegated-capability"` | nested envelope | Cached capability tokens for offline use              |
+| `"delegated-capability"` | nested envelope | Cached **Biscuit** agency tokens ([`identikey-capability-v1.md`](identikey-capability-v1.md)) for offline use. Recrypt PRE keys are not this assertion. |
 | `"preference"`          | string/map      | UI preferences (default server, output format)        |
 | `"backup-metadata"`     | map             | Last backup time, backup provider, verification hash  |
 | `"recovery-share"`      | bytes           | SSS share for key recovery                            |

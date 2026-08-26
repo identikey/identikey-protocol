@@ -236,7 +236,8 @@ That document is transport. This one is the proof.
 
 This protocol is a **possession proof**, not an authorization server
 and not a capability envelope. `aud` scopes the proof to a service.
-Delegation / UCAN-style capabilities stay out of v1 (§9, §11).
+Delegation is a separate layer: [`identikey-capability-v1.md`](identikey-capability-v1.md)
+(Biscuit). Do not put grants on this challenge.
 
 ## 9. What we kept vs. cut from SIWE / CAIP-122
 
@@ -246,8 +247,9 @@ These give replay resistance, audience/cross-service-replay resistance, time-bou
 
 **Cut:** `chain-id` (no blockchain), blockchain-address formatting (EIP-55 / CAIP-10) in favor of a
 self-describing public key + Blake3 fingerprint, the `uri` field (redundant with `aud` for a desktop
-app), `resources` / `request-id` (capability delegation is a separate concern — see recrypt's UCAN-style
-capabilities), and the human-readable ABNF message template (we control both ends; canonical dCBOR is
+app), `resources` / `request-id` (capability delegation is a separate layer —
+[`identikey-capability-v1.md`](identikey-capability-v1.md), Biscuit; not a field on this
+challenge), and the human-readable ABNF message template (we control both ends; canonical dCBOR is
 cleaner and removes escaping/parse ambiguity). `version` is kept as a single integer.
 
 ## 10. Security considerations
@@ -266,8 +268,10 @@ cleaner and removes escaping/parse ambiguity). `version` is kept as a single int
 - **NodeId attestation (Papyrus FR5/FR6).** The same signing key attests an iroh `NodeId` by signing it
   under a `"node-attestation"` purpose tag (same domain-separation scheme as §4.3). To be specified
   alongside the Papyrus transport work (`Papyrus-0tk` / `Papyrus-rh0`).
-- **Delegation / capability chains.** Out of scope for v1; align with `recrypt-storage-auth`'s
-  UCAN-style capabilities when needed.
+- **Delegation / capability chains.** Out of scope for this challenge. Agency tokens are
+  Biscuit — [`identikey-capability-v1.md`](identikey-capability-v1.md). Recrypt’s
+  Gordian-envelope capabilities remain *data* access (PRE / storage-auth), not this
+  proof and not the agency token.
 - **HD device-key derivation** (Papyrus FR30) — multiple devices under one IdentiKey root — deferred.
 - **SLH-DSA (FIPS 205)** as a conservative hash-based PQ alternative — reserve a registry tag if needed.
 - **OSS license** — the crate currently inherits the recrypt workspace license; pick the OSS license at
