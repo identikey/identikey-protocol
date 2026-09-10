@@ -193,7 +193,98 @@ object.
 
 ---
 
-## 7. Out of scope
+## 7. Secret-redemption profile (foreign secrets)
+
+A working secret (GitHub PAT, API key) must not travel down an
+agent tree. This profile is an **online-verifier application of
+agency**. It does not weaken §2 for other profiles (VM exec,
+mailbox, snapshot). It is not a fourth crypto layer. Recrypt PRE
+stays data access for *our* ciphertext. The first verifier is
+Mjolnir's tokenator (`add-secret-tokenator`, living spec
+`secret-tokenator`).
+
+### 7.1 Holder-bound
+
+A Biscuit that authorizes `redeem` of a foreign secret SHALL name
+the holder that may perform it. v1 holder class is a single
+Identikey public key. The token SHALL carry a holder **check**
+(`check if holder($fp), $fp == "<fingerprint>"`) and SHALL NOT
+assert a `holder` fact in any block. Fingerprint is the Blake3
+identity fingerprint from auth-challenge v1 §5. A verifier SHALL
+NOT treat possession of the token bytes as sufficient. It SHALL
+verify a signature by that key over a single signed tuple (token
+identity, verifier-chosen nonce, audience; plus a response key if
+the profile seals the release), compute the fingerprint from the
+presented `{alg, key}`, inject the `holder(<fingerprint>)`
+**fact** (verifier-injected only), then evaluate the Biscuit. A
+failed holder proof SHALL fail closed. Encoding of the tuple and
+the definition of token identity stay with Mjolnir
+`add-biscuit-runtime` / `ikp-6yz.2`.
+
+This requirement SHALL NOT apply to other agency profiles unless
+those profiles add it. A root VM-exec Biscuit without a holder
+check is not a violation of this spec.
+
+A minted token whose authority or attenuation block contains a
+`holder` fact SHALL be rejected.
+
+### 7.2 Secret bytes stay out of the token
+
+A Biscuit SHALL NOT contain the bytes of a foreign secret, nor a
+ciphertext of those bytes that the presenter can decrypt without
+the verifier. It MAY name a secret identifier and SHALL, if it
+carries a digest of the secret, use a **salted** Blake3
+commitment (`Blake3(domain || salt || secret)`). Salt MAY travel
+with the token. An unsalted hash of the secret SHALL NOT appear
+on the wire (Recrypt D-5: salting is mandatory for low-entropy
+secrets). Copy-out (release of `{value, salt}` to the holder;
+Mjolnir tokenator) SHALL be verifiable against that commitment.
+Holder fingerprints SHALL be Blake3 per auth-challenge v1 §5, not
+a SHA-256 stub and not a raw-Ed25519 preimage.
+
+### 7.3 Hop provenance is the Biscuit block chain
+
+v1 redeem SHALL succeed with zero hop blocks when the issuer
+bound the holder at mint. When a hop is recorded, it SHALL be a
+Biscuit block on that token, not an `identikey-log` (or other)
+op. A hop SHALL NOT remove holder checks or widen rights.
+
+v1 hop blocks are **nextKey attenuation**: signed by the token's
+current nextKey, which the holder of the bytes has. That proves
+monotonicity, not Identikey attribution. Identikey-signed hops
+SHALL use Biscuit third-party blocks and are not v1.
+
+### 7.4 Redemption is agency, not PRE
+
+Redeeming a foreign secret SHALL be specified as an agency
+operation on a Biscuit (`redeem` of a named secret), verified by
+a tokenator that already holds the secret. Recrypt PRE SHALL
+remain the layer for *our* ciphertext. A design that puts
+Recrypt-protected data behind this tokenator, or that
+PRE-transforms a GitHub PAT, SHALL be rejected.
+
+The owner *could* Recrypt-encrypt a PAT to Z (plaintext in hand;
+no GitHub participation). That is the wrong tier: PRE is durable
+read with no per-use policy. Agency plus an online verifier gives
+redeemable use with TTL/scope/log.
+
+The verifier SHALL release the secret only to the party that
+completed the holder proof, over a channel that delegation-path
+intermediaries cannot read. Application profiles choose the
+binding: host-local overlay where the holder is the socket peer
+(Mjolnir v1), a transport authenticated to the holder key, or
+sealing the response to a response key carried in the signed
+holder proof.
+
+### 7.5 Guild holder class is not v1
+
+v1 SHALL bind a holder to one public key. Membership in a guild
+or keyspace MAY be named as a future holder class. v1 SHALL NOT
+require a membership lookup to accept a holder-bound token.
+
+---
+
+## 8. Out of scope
 
 - Revocation sets / bloom filters (product; TTL + authority
   epoch cover the common case).
@@ -207,9 +298,16 @@ object.
 
 ---
 
-## 8. What changed on 2026-08-26
+## 9. What changed on 2026-08-26
 
 Auth-challenge v1 §9 and §11, and the OIDC grant “not a
 capability” line, pointed at Recrypt UCAN-style capabilities
 “when needed.” That pointer is wrong for *agency*. Recrypt
 keeps data-access capabilities. Agency is Biscuit.
+
+## 10. What changed on 2026-09-10
+
+§7 secret-redemption profile: holder is a **check** in the
+token, never a `holder` fact; signed tuple is identity + nonce
++ audience; release is holder-bound; PRE is the wrong tier for
+a PAT (Mjolnir `update-identikey-capability`, Fable accept).
