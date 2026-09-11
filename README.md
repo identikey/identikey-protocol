@@ -10,6 +10,7 @@ are meant to outlive any single steward.
 
 | Crate | What it is |
 |---|---|
+| [`identikey-admit`](crates/identikey-admit) | Portable VM-thaw admission protocol: envelope format, attestation shape (`vm_id` + non-negative integer `epoch`), verdict vocabulary (`deny` / `drop` / `reply-here` / `deliver`), pure validators. No lifecycle, no `identikey-core`. |
 | [`identikey-auth`](crates/identikey-auth) | Hardware-enclave-backed challenge/response authentication: audience-bound nonce challenges signed by Secure Enclave (macOS), TPM 2.0 (Linux/Windows), or software keys; cipher-agile (Ed25519/P-256 + optional ML-DSA), no relying-party server required. |
 | [`identikey-wallet`](crates/identikey-wallet) | Password-encrypted identity wallet: `IKEYW` v2 file format (Argon2id + XChaCha20-Poly1305), OS keychain key caching (macOS Keychain / Secret Service / Windows Credential Manager), Gordian Envelope container with forward-compatible unknown-assertion preservation. Generic over the identity type via the `WalletIdentity` trait. |
 | [`identikey-log`](crates/identikey-log) | Signed, actor-attributed, content-addressed, causally-ordered append-only op log, as a *profile* of Gordian Envelope. Signatures cover a digest tree, so a partially redacted op still verifies. Builds for `wasm32-unknown-unknown`. |

@@ -1,0 +1,16 @@
+[package]
+name = "identikey-admit"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Portable VM-thaw admission protocol: envelope, attestation shape, verdict vocabulary, pure validators. No lifecycle."
+
+[dependencies]
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+
+# This crate MUST NOT depend on identikey-core (AGPL). It is the permissive
+# protocol tier: a gateway plugin or CDN origin adapter can link it without
+# an AGPL obligation. Do not add identikey-auth / identikey-wallet / identikey-log
+# either — those are product-adjacent; admit is wire + validators only.
