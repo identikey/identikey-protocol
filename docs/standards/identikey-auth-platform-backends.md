@@ -6,6 +6,13 @@
 (Apple Secure Enclave ✅ done; Windows TPM/Hello ⬜; Linux TPM ⬜).
 **Companion:** [`identikey-auth-challenge-v1.md`](./identikey-auth-challenge-v1.md) (protocol, §8 key storage)
 
+A3 *access* passkeys (hosted OP at `auth.identikey.me`) are not these
+enclave signers. They are WebAuthn discoverable credentials. Synced
+authenticators (1Password, iCloud Keychain, Google Password Manager)
+are valid A3 holders. Registration MUST request `residentKey=required`
+and MUST NOT set `authenticatorAttachment` to `platform`. That is
+identikey-core passkeys living spec, not a custody-rung change.
+
 These are the cross-platform engineering lessons learned implementing the macOS Secure
 Enclave backend. They generalize — read before adding the Windows or Linux backend.
 
