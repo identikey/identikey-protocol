@@ -73,6 +73,13 @@ Unknown assertions — wallet-level and identity-level — are preserved
 verbatim across load/save, so an older client (or a generic tool like
 `ikey`) never destroys another application's extensions.
 
+## Contributing
+
+Contributions are licensed inbound under **Apache-2.0 OR BSD-2-Clause-Patent**.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the required `Signed-off-by` process
+and [DCO.md](DCO.md) for the Developer Certificate of Origin; this repository
+does not require a CLA.
+
 ## License
 
 Apache-2.0 OR BSD-2-Clause-Patent — your choice; see [LICENSE](LICENSE)
