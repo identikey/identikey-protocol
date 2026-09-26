@@ -12,7 +12,7 @@ base64 = { workspace = true }
 biscuit-auth = { workspace = true }
 blake3 = { workspace = true }
 hex = { workspace = true }
-identikey-auth = { path = "../identikey-auth", default-features = false }
+identikey-auth = { path = "../identikey-auth", version = "0.1.0", default-features = false }
 thiserror = { workspace = true }
 
 [dev-dependencies]
