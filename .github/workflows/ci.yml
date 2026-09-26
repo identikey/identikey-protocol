@@ -41,8 +41,26 @@ jobs:
       # exercised here. Both configurations must pass: `pqcrypto` changes which
       # `Signature` variants exist, which changes what decodes.
       - run: cargo test -p identikey-log --features pqcrypto
-      - run: cargo clippy -p identikey-log --all-targets
+      - run: cargo clippy --workspace --all-targets
       - run: cargo clippy -p identikey-log --all-targets --features pqcrypto
+
+  # cargo-deny is the CI half of ikp-45w / ADR-002: the protocol tier may
+  # never take a copyleft dependency without a recorded exception. deny.toml
+  # is the allowlist; this job is the gate. Runs off cargo metadata, not a
+  # full compile. Vendored Blockchain Commons forks are [patch.crates-io]
+  # path replacements (see deny.toml); they are not excluded from the graph.
+  licenses:
+    name: licenses (cargo-deny)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install cargo-deny
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-deny
+      - name: Check dependency licences
+        run: cargo deny check licenses
 
   wasm32:
     name: wasm32-unknown-unknown (one host import)

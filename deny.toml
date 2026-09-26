@@ -23,8 +23,13 @@
 
 [graph]
 all-features = true
-# The vendored Blockchain Commons forks are patch sources with their own
-# resolution, excluded from the workspace; see the root Cargo.toml.
+# vendor/bc-shamir and vendor/dcbor are [patch.crates-io] path replacements
+# (root Cargo.toml). cargo-deny walks them as the crates they replace
+# (bc-shamir, dcbor), both BSD-2-Clause-Patent. They are NOT listed in
+# exclude — excluding them would skip the license check this file exists
+# to enforce. Workspace members stay unpublished until ikp-6yz.1; still
+# check their graphs.
+exclude = []
 
 [licenses]
 allow = [
@@ -96,6 +101,11 @@ confidence-threshold = 0.9
 [[licenses.exceptions]]
 name = "option-ext"
 allow = ["MPL-2.0"]
+
+# Workspace members are unpublished until ikp-6yz.1. Still check their
+# dependency graphs; do not skip unpublished crates.
+[licenses.private]
+ignore = false
 
 [bans]
 multiple-versions = "allow"
