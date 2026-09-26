@@ -231,10 +231,35 @@ When implementing a dCBOR encoder (Zig side):
 
 ---
 
+## 11. Envelope tags used by this tier (self-contained)
+
+Restated so an implementer does not have to read recrypt's wire-protocol.
+Recrypt PRE-specific tags stay in recrypt.
+
+| CBOR tag | Role | Owner |
+|---|---|---|
+| `#6.200` | Envelope | Blockchain Commons |
+| `#6.201` | Leaf (dCBOR-encoded subject) | Blockchain Commons |
+| `#6.1` | Epoch time (RFC 8949) | IETF |
+
+Every wallet envelope is a `#6.200`-tagged value. The subject of a
+wallet or identity envelope is a `#6.201`-tagged dCBOR map containing
+a `"type"` field. `'signed'` is the Blockchain Commons Known Value for
+a signature assertion. Low-entropy fields that may be elided MUST be
+salted (see [`encoding-conventions.md`](encoding-conventions.md)).
+
+dCBOR rules that apply here (Blockchain Commons profile, stricter than
+RFC 8949 canonical):
+
+- Map keys sorted in encoded-byte lexicographic order.
+- Integers use the smallest encoding; non-canonical encodings are invalid.
+- No indefinite-length items.
+- No floats in this tier's envelopes.
+- Re-serializing any parsed value MUST produce byte-identical output.
+
 ## See also
 
-- [Wire Protocol: dCBOR section](https://github.com/identikey/recrypt/blob/main/docs/wire-protocol.md#21-dcbor) — detailed dCBOR rules for all recrypt types
 - [Wallet Envelope Format: Identity section](wallet-envelope-format.md#32-identity-envelope) — full identity envelope structure
-- [Encoding Conventions](https://github.com/identikey/recrypt/blob/main/docs/standards/encoding-conventions.md) — when to use raw bytes vs base58 vs base64 at text boundaries
+- [Encoding Conventions](encoding-conventions.md) — when to use raw bytes vs `ur:` vs base58 vs base64 at text boundaries
 - [RFC 8949 §4.2: Preferred Encoding](https://datatracker.ietf.org/doc/html/rfc8949#section-4.2)
 - [Blockchain Commons dCBOR](https://cborbook.com/part_2/cbor_cde_dcbor.html)

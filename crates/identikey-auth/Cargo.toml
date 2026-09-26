@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "IdentiKey hardware-enclave-backed challenge/response authentication protocol"
+readme = "README.md"
 
 [features]
 default = []

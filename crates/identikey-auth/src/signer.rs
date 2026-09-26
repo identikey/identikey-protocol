@@ -90,6 +90,16 @@ impl SoftwareSigner {
         }
     }
 
+    /// Rebuild a P-256 signer from a 32-byte secret scalar (test vectors).
+    pub fn from_p256_seed(seed: [u8; 32]) -> Result<Self> {
+        let sk = p256::ecdsa::SigningKey::from_bytes((&seed).into())
+            .map_err(|e| AuthError::Backend(format!("p256 seed: {e}")))?;
+        Ok(Self {
+            classical: ClassicalSecret::P256(sk),
+            pq: None,
+        })
+    }
+
     /// Attach a freshly generated ML-DSA-65 post-quantum key to this identity.
     pub fn with_ml_dsa_65(mut self) -> Result<Self> {
         use fips204::traits::SerDes;

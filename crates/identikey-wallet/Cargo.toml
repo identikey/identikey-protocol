@@ -5,6 +5,7 @@ edition.workspace = true
 license.workspace = true
 repository.workspace = true
 description = "Password-encrypted identity wallet: Argon2id + XChaCha20-Poly1305 file format, OS keychain caching, Gordian Envelope container"
+readme = "README.md"
 
 [dependencies]
 anyhow = { workspace = true }
@@ -32,4 +33,5 @@ keyring = { version = "3", features = ["linux-native"] }
 keyring = { version = "3", features = ["windows-native"] }
 
 [dev-dependencies]
+bc-envelope = { workspace = true }
 tempfile = { workspace = true }

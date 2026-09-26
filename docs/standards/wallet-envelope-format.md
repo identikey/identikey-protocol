@@ -4,7 +4,7 @@
 **Date:** 2026-04-09 (proposal); stabilized 2026-04-27
 **Implementation:** [`crates/identikey-wallet/src/envelope.rs`](../../crates/identikey-wallet/src/envelope.rs) (encode/decode), [`crates/identikey-wallet/src/format.rs`](../../crates/identikey-wallet/src/format.rs) (outer encryption shell). Both were extracted from `recrypt-cli/src/wallet/` on 2026-08-01; recrypt now consumes them via the `WalletIdentity` trait.
 **Supersedes:** The JSON-in-XChaCha20-Poly1305 wallet format (v1), then in `recrypt-cli/src/wallet/format.rs`
-**Follows:** [wire-protocol.md](https://github.com/identikey/recrypt/blob/main/docs/wire-protocol.md) conventions (subject/assertion rule, salting policy, multi-sig)
+**Follows:** [`dcbor-determinism.md`](dcbor-determinism.md) (subject/assertion tags, map-key order) and [`encoding-conventions.md`](encoding-conventions.md) (salting, text boundaries). Recrypt PRE identity shape stays in recrypt `identity-self-signature.md`.
 
 ---
 
@@ -39,7 +39,7 @@ The wallet is always encrypted at rest. Why not just use a flat CBOR map?
 
 ## 3. Envelope structure
 
-Shown in CBOR diagnostic notation, following [wire-protocol.md](https://github.com/identikey/recrypt/blob/main/docs/wire-protocol.md) conventions.
+Shown in CBOR diagnostic notation, following [`dcbor-determinism.md`](dcbor-determinism.md).
 
 ### 3.1 Top-level wallet envelope
 
@@ -185,7 +185,7 @@ Offset  Size  Field
 
 ## 6. Determinism and round-trip guarantee
 
-The wallet envelope MUST produce byte-identical output when re-serialized without modification. This is guaranteed by dCBOR's deterministic encoding rules (see [wire-protocol.md §2.1](https://github.com/identikey/recrypt/blob/main/docs/wire-protocol.md#21-dcbor)).
+The wallet envelope MUST produce byte-identical output when re-serialized without modification. This is guaranteed by dCBOR's deterministic encoding rules (see [`dcbor-determinism.md`](dcbor-determinism.md)).
 
 However, a **save-after-load without changes** will NOT produce an identical *file* because the outer shell uses a fresh random nonce on every write. The envelope bytes inside the ciphertext are identical; the ciphertext itself differs. This is by design — nonce reuse in XChaCha20-Poly1305 is catastrophic.
 

@@ -1,6 +1,6 @@
 # IdentiKey Auth — Challenge/Response Protocol v1
 
-**Status:** Draft spec
+**Status:** Draft spec. Fixtures in `crates/identikey-auth/tests/fixtures/` (`ikp-6yz.2`).
 **Date:** 2026-06-27
 **Crate:** [`identikey-auth`](../../crates/identikey-auth) (this workspace)
 **Reference:** [RFC 8949 §4.2.1 (Canonical CBOR)](https://datatracker.ietf.org/doc/html/rfc8949#section-4.2.1),

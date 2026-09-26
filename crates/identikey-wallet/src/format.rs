@@ -157,28 +157,41 @@ pub fn decrypt_wallet_with_key<I: WalletIdentity>(
     envelope::from_envelope(&plaintext, params)
 }
 
-/// Encrypt wallet with pre-derived key and salt (no password prompt needed)
+/// Encrypt wallet with pre-derived key and salt (no password prompt needed).
+/// Nonce is random. For committed fixtures, use
+/// [`encrypt_wallet_with_key_nonce`].
 pub fn encrypt_wallet_with_key<I: WalletIdentity>(
     data: &WalletData<I>,
     key: &[u8; 32],
     salt: &[u8; 32],
     params: &WalletParams,
 ) -> Result<Vec<u8>> {
-    let plaintext = zeroize::Zeroizing::new(envelope::to_envelope(data, params)?);
-
     let mut nonce = [0u8; 24];
     rand::thread_rng().fill_bytes(&mut nonce);
+    encrypt_wallet_with_key_nonce(data, key, salt, &nonce, params)
+}
 
+/// Encrypt wallet with an explicit XChaCha20-Poly1305 nonce (24 bytes).
+/// Used for byte-stable test vectors.
+pub fn encrypt_wallet_with_key_nonce<I: WalletIdentity>(
+    data: &WalletData<I>,
+    key: &[u8; 32],
+    salt: &[u8; 32],
+    nonce: &[u8; 24],
+    params: &WalletParams,
+) -> Result<Vec<u8>> {
+    let plaintext = zeroize::Zeroizing::new(envelope::to_envelope(data, params)?);
     let cipher = XChaCha20Poly1305::new_from_slice(key)?;
+    let nonce_arr: [u8; 24] = *nonce;
     let ciphertext = cipher
-        .encrypt(&nonce.into(), plaintext.as_slice())
+        .encrypt(&nonce_arr.into(), plaintext.as_slice())
         .map_err(|e| anyhow!("Encryption failed: {e}"))?;
 
     let mut output = Vec::with_capacity(5 + 1 + 32 + 24 + ciphertext.len());
     output.extend_from_slice(MAGIC);
     output.push(VERSION);
     output.extend_from_slice(salt);
-    output.extend_from_slice(&nonce);
+    output.extend_from_slice(nonce);
     output.extend_from_slice(&ciphertext);
 
     Ok(output)

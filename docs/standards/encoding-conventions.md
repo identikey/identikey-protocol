@@ -230,7 +230,8 @@ security decisions."
 
 ## 8. References
 
-- [wire-protocol.md](https://github.com/identikey/recrypt/blob/main/docs/wire-protocol.md) — wire format (envelope + dCBOR)
+- [`dcbor-determinism.md`](dcbor-determinism.md) — envelope tags and dCBOR rules for this tier
+- Recrypt [wire-protocol.md](https://github.com/identikey/recrypt/blob/main/docs/wire-protocol.md) — PRE/wire format (not required to implement identity-tier formats)
 - [wallet-envelope-format.md](wallet-envelope-format.md) — wallet body encoding
 - [http-api-reference.md](https://github.com/identikey/recrypt/blob/main/docs/http-api-reference.md) — header & JSON-body encodings
 - [hashing-standard.md](https://github.com/identikey/recrypt/blob/main/docs/standards/hashing-standard.md) — fingerprint / file-hash construction
