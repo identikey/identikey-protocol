@@ -81,7 +81,7 @@ impl BasicIdentity {
 }
 
 fn bs58_encode(bytes: &[u8]) -> String {
-    // Minimal base58btc encoder (avoids a dependency for one call site).
+    // Minimal base58 encoder (avoids a dependency for one call site).
     const ALPHABET: &[u8] = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz";
     let mut digits: Vec<u8> = Vec::with_capacity(bytes.len() * 138 / 100 + 1);
     for &byte in bytes {

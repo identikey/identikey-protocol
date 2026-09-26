@@ -38,6 +38,14 @@ not a text form when `ur:` exists.
 
 **Rule of thumb for choosing between base58 and base64:** if a human will copy/paste it, base58. If a machine produces and consumes it, base64. The 256-byte cutoff exists because base58's bignum arithmetic is quadratic — a 5 KB ML-DSA key takes orders of magnitude longer to encode than the 5 KB itself warrants.
 
+**Base58 is this alphabet, and only this alphabet:**
+
+```text
+123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz
+```
+
+`0`, `O`, `I`, and `l` are absent. A leading zero byte encodes as a leading `1`. The encoded value is the raw bytes: no version byte and no checksum. Base58check, the Flickr alphabet, and the Ripple alphabet are not base58 here. Call it base58. The `bs58` crate's default alphabet is this one.
+
 ## 3. Forbidden encodings
 
 - **JSON byte arrays** (`[1, 2, 3, …]`). Anywhere. If you find yourself reaching for one, the right answer is CBOR (envelope) or one of the text encodings above. Serde's default for `[u8; N]` produces these — guard against it with `#[serde(with = "…")]` or a wrapper type at any boundary that touches JSON.
