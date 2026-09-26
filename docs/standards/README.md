@@ -8,7 +8,7 @@ can safely reimplement.
 | Spec | Specifies | Implemented by |
 |---|---|---|
 | [`identikey-auth-challenge-v1.md`](identikey-auth-challenge-v1.md) | Audience-bound nonce challenge/response, cipher-agile, CBOR wire form. Same bytes for wallet signer and managed-custody operator. Possession proof, not a grant. | [`identikey-auth`](../../crates/identikey-auth) |
-| [`identikey-capability-v1.md`](identikey-capability-v1.md) | Agency capability tokens: Biscuit, Ed25519 authority, monotonic attenuation. Identity is how you mint; Recrypt PRE is data access. Foreign-secret **redeem** is a holder-bound online-verifier profile (token carries a holder check, not a `holder` fact; secret bytes stay out of the token). | First profile: Mjolnir (`rbac-design.md`, tokenator). No crate in this workspace yet. |
+| [`identikey-capability-v1.md`](identikey-capability-v1.md) | Agency capability tokens: Biscuit, Ed25519 authority, monotonic attenuation. Identity is how you mint; Recrypt PRE is data access. Foreign-secret **redeem** is a holder-bound online-verifier profile (token carries a holder check, not a `holder` fact; secret bytes stay out of the token). | [`identikey-capability`](../../crates/identikey-capability). First product profile: Mjolnir (`rbac-design.md`, tokenator). |
 | [`identikey-keyspace-v1.md`](identikey-keyspace-v1.md) | Shared keyspace: distributed object of keys, FOKS methods, identikey-log `keyspace.*` ops, self-describing CBOR wraps. Product word is guild. | No crate in this workspace yet. Ops ride [`identikey-log`](../../crates/identikey-log). |
 | [`identikey-oidc-urn-grant-v1.md`](identikey-oidc-urn-grant-v1.md) | How that `Response` is carried on OAuth `POST /token` (`urn:identikey:params:oauth:grant-type:challenge-response`) | `identikey-oidc` in identikey-core (product) |
 | [`identikey-auth-platform-backends.md`](identikey-auth-platform-backends.md) | Engineering notes for `Signer` backends against hardware key stores (Secure Enclave, TPM 2.0) | [`identikey-auth`](../../crates/identikey-auth) |
@@ -21,10 +21,10 @@ behind by the code extraction of 2026-08-01 (recrypt D-4).
 
 ## Known gap: these are not yet independently implementable
 
-**None of these carry test vectors.** That is the single largest thing standing
-between "we wrote a spec" and "someone else can implement it" — a spec without
-vectors gets read, a spec with vectors gets implemented — and it is the reason
-`ikp-6yz.2` exists.
+Auth-challenge, wallet-envelope, and capability now carry committed fixtures
+under each crate's `tests/fixtures/` (`ikp-6yz.2`, `ikp-6yz.4`). Remaining
+gap is other docs in this folder (OIDC grant, keyspace, platform backends)
+and spec license (OWFa vs CC-BY, still a human decision).
 
 Two of them also still lean on documents that stayed in recrypt, which is a
 real dependency and not just a broken link:
@@ -38,7 +38,9 @@ real dependency and not just a broken link:
   `identity-self-signature.md`, and that one is correctly recrypt's:
   app-specific key material (`pre-public`, `pre-backend`) riding on a generic
   container is exactly the boundary D-4 drew.
-- `dcbor-determinism.md` references recrypt's `wire-protocol.md` for context.
+- `dcbor-determinism.md` restates the envelope tags and dCBOR rules this
+  tier needs. Recrypt's `wire-protocol.md` remains the PRE/wire document
+  and is not required to implement identity-tier formats.
 
 Those links are absolute URLs into the recrypt repo, so they resolve. But an
 implementer who cannot read an AGPL repo — the exact person this tier is for —

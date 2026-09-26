@@ -3,6 +3,7 @@ resolver = "2"
 members = [
     "crates/identikey-admit",
     "crates/identikey-auth",
+    "crates/identikey-capability",
     "crates/identikey-log",
     "crates/identikey-wallet",
     "ikey",
@@ -49,6 +50,7 @@ anyhow = "1"
 argon2 = "0.5"
 base64 = "0.22"
 bc-envelope = "=0.43.0"
+biscuit-auth = "6.0"
 blake3 = "1"
 bs58 = "0.5"
 chacha20poly1305 = "0.10"
@@ -56,6 +58,7 @@ clap = { version = "4", features = ["derive", "env", "wrap_help"] }
 dialoguer = "0.11"
 directories = "5"
 ed25519-dalek = { version = "2.1", features = ["rand_core", "serde"] }
+hex = "0.4"
 keyring = { version = "3", default-features = false }
 proptest = "1"
 rand = "0.8"

@@ -1,9 +1,10 @@
 # IdentiKey Capability Tokens v1
 
-**Status:** Adopted format. Draft spec. No test vectors yet (`ikp-6yz.2`).
+**Status:** Adopted format. Draft spec. Fixtures in
+`crates/identikey-capability/tests/fixtures/` (`ikp-6yz.4`).
 **Date:** 2026-08-26
-**Does not implement:** a crate in this workspace. Format choice plus
-the identity/capability split. First consumer profile: Mjolnir
+**Implements:** [`identikey-capability`](../../crates/identikey-capability)
+(wire + validators; no lifecycle). First consumer profile: Mjolnir
 ([`docs/plans/rbac-design.md`](https://github.com/identikey/mjolnir/blob/main/docs/plans/rbac-design.md)).
 **Biscuit:** [biscuitsec.org](https://www.biscuitsec.org) /
 [`biscuit-auth`](https://docs.rs/biscuit-auth).
@@ -292,9 +293,10 @@ require a membership lookup to accept a holder-bound token.
   Mjolnir communication, not this token.
 - Recrypt PRE, field-scoped recryption, storage-auth envelope
   capabilities.
-- Test vectors — `ikp-6yz.2`. Until they exist this spec is
-  not independently implementable, same as the rest of this
-  folder.
+- Application profiles (Mjolnir login Datalog, tokenator, HTTP).
+- Test vectors for **other** identity-tier specs — `ikp-6yz.2`.
+  Capability fixtures live in
+  `crates/identikey-capability/tests/fixtures/` (`ikp-6yz.4`).
 
 ---
 

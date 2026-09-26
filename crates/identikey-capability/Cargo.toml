@@ -1,0 +1,19 @@
+[package]
+name = "identikey-capability"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "IdentiKey agency capability tokens: Biscuit mint/verify, holder checks, Ed25519 authority. Wire + validators, no lifecycle."
+readme = "README.md"
+
+[dependencies]
+base64 = { workspace = true }
+biscuit-auth = { workspace = true }
+blake3 = { workspace = true }
+hex = { workspace = true }
+identikey-auth = { path = "../identikey-auth", default-features = false }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+hex = { workspace = true }
