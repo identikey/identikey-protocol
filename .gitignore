@@ -5,3 +5,10 @@ target/
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Intention scratch (conductor isolate, spawn stage, harness session)
+.worktrees/
+.spawns/
+.omc/
+.omx/
+groups/*/inventory.json

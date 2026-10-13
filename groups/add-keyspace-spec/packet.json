@@ -1,0 +1,59 @@
+{
+  "schema_version": "1.0",
+  "id": "pkt-add-keyspace-spec-fold",
+  "node_id": "add-keyspace-spec",
+  "capability": "identikey-keyspace",
+  "change_id": "add-keyspace-spec",
+  "requester": {
+    "id": "agt-duke",
+    "kind": "human",
+    "harness": "human",
+    "signing": { "mode": "stand-in", "stand_in_id": "agt-duke" }
+  },
+  "assignee": {
+    "id": "agt-opus-5-fold",
+    "kind": "model",
+    "harness": "claude",
+    "interface": "opus-5",
+    "signing": { "mode": "stand-in", "stand_in_id": "agt-opus-5-fold" }
+  },
+  "goal": "Fold add-keyspace-spec in identikey-protocol. Repo: /Users/dukejones/work/IdentiKey/identikey-protocol. Living spec is already docs/standards/identikey-keyspace-v1.md (act landed). Do git mv openspec/changes/add-keyspace-spec to openspec/changes/archive/2026-09-01-add-keyspace-spec. If docs/LEARNINGS.md is missing, create it with one dated line: this repo's spec surface is docs/standards/, not openspec/specs/. Do not commit. Stop.",
+  "anchors": [
+    {
+      "symbol": "docs/standards/identikey-keyspace-v1.md",
+      "invariant": "Already the living protocol spec; fold does not rewrite it"
+    }
+  ],
+  "acceptance": {
+    "kind": "command",
+    "command": "test ! -d openspec/changes/add-keyspace-spec && test -d openspec/changes/archive/2026-09-01-add-keyspace-spec && test -f docs/standards/identikey-keyspace-v1.md && test ! -d openspec/specs/identikey-keyspace"
+  },
+  "out_of_scope": [
+    { "item": "Create openspec/specs/identikey-keyspace", "tracked_as": "steer AUTO on ikp-cvu" },
+    { "item": "Rewrite the standards doc", "tracked_as": "already acted" },
+    { "item": "git commit or push", "tracked_as": "conductor persist" }
+  ],
+  "constraints": {
+    "permission": "write",
+    "paths": [
+      "openspec/changes/add-keyspace-spec",
+      "openspec/changes/archive",
+      "docs/LEARNINGS.md"
+    ],
+    "do_not": [
+      "deploy",
+      "create openspec/specs/",
+      "edit docs/standards/identikey-keyspace-v1.md",
+      "commit",
+      "push"
+    ]
+  },
+  "non_goals": [
+    "Do not follow fold-steps.md step 3/4 that would create openspec/specs/. This repo's living file is docs/standards/."
+  ],
+  "load_class": "structure-clear",
+  "rigor": "architecture",
+  "density": "standard",
+  "surface": "skill-host",
+  "role": "folder"
+}
