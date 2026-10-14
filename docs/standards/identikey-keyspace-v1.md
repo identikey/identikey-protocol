@@ -2,6 +2,7 @@
 
 **Status:** Draft spec. Test-vector hooks named; fixtures not filled (`ikp-6yz.2`).
 **Date:** 2026-09-01
+**Updated:** 2026-10-13 (`ikp-2l8`: `PublicKey.alg` `x25519`)
 **Does not implement:** a crate in this workspace. Ops ride
 [`identikey-log`](../../crates/identikey-log). First product consumer:
 identikey-core `guild-keyspaces` / Lightning Mesh (product word **guild**).
@@ -120,10 +121,14 @@ Not `guild.*`. Kick, wrap, rewrap, blacklist, and admin-grant are
 
 **Authors** of `keyspace.*` ops are identikey-log Ed25519 actors.
 
-**Wrap-targets** are PUKs: Ed25519 (via X25519, §7.2) or P-256.
+**Wrap-targets** are PUKs: Ed25519 (via X25519, §7.2), native X25519
+encapsulation keys (32-byte u-coordinate), or P-256.
 
-A P-256-only enclave identity can receive a wrap and cannot author a
-`keyspace.*` op. An admin companion is Ed25519.
+A native X25519 encapsulation key is a wrap-target only. It names the
+C2 / `PrivateKeyBase` encapsulation half directly, not an Ed25519
+identity key run through §7.2. It is not an actor and cannot author a
+`keyspace.*` op. A P-256-only enclave identity can receive a wrap and
+cannot author a `keyspace.*` op. An admin companion is Ed25519.
 
 `admin: true` on a roster entry requires an Ed25519 `actor`.
 
@@ -137,7 +142,8 @@ dCBOR maps. Keys are short text. Byte strings are raw
 ```
 PublicKey := { "alg": tstr, "key": bstr }
 
-; alg "ed25519" → key 32 bytes (RFC 8032)
+; alg "ed25519" → key 32 bytes (RFC 8032); wrap via §7.2
+; alg "x25519"  → key 32 bytes (X25519 u-coordinate); wrap-target only
 ; alg "p256"    → key 33 bytes compressed SEC1 (same as auth-challenge v1)
 
 RosterEntry := {
@@ -210,18 +216,24 @@ Ciphertext is ciphertext ‖ 16-byte tag.
 
 ### 7.2 Ed25519 PUK → X25519
 
-For `x25519-xchacha20poly1305` when the PUK is an Ed25519 identity
-key, convert the 32-byte Ed25519 public key to an X25519 public key
-per RFC 7748 §4.1 (birational map; equivalent to libsodium
+For `x25519-xchacha20poly1305` when the roster `PublicKey.alg` is
+`ed25519`, convert the 32-byte Ed25519 public key to an X25519 public
+key per RFC 7748 §4.1 (birational map; equivalent to libsodium
 `crypto_sign_ed25519_pk_to_curve25519`).
 
-Implementations MUST reject the all-zero X25519 public key and the
-small-order Montgomery u-coordinates (torsion). A rejected conversion
-is not a successful wrap or unwrap.
+When `PublicKey.alg` is `x25519`, the 32-byte `key` is already the
+u-coordinate. Use those bytes as `Wrap.recipient`. Do not apply the
+Ed25519 birational map.
 
-Private-key conversion, when the holder wraps to themselves, uses the
-matching RFC 7748 / libsodium secret-key map with clamping as
-specified there.
+Implementations MUST reject the all-zero X25519 public key and the
+small-order Montgomery u-coordinates (torsion). A rejected key or
+conversion is not a successful wrap or unwrap.
+
+Private-key conversion, when the holder wraps to themselves from an
+Ed25519 identity, uses the matching RFC 7748 / libsodium secret-key
+map with clamping as specified there. A native X25519 encapsulation
+secret is already an X25519 scalar: clamp per RFC 7748 and do not
+apply the Ed25519 secret map.
 
 ### 7.3 P-256
 
