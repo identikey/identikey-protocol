@@ -122,4 +122,7 @@ verified here like any other.
   ([`identikey-capability-v1.md`](identikey-capability-v1.md)). Recrypt
   storage-auth envelopes stay data-access, not this grant.
 - Not a requirement that every RP speak dCBOR.
+- Not party passkeys or party certificates. Those are
+  [`identikey-party-v1.md`](identikey-party-v1.md). A WebAuthn assertion
+  still does not satisfy this grant.
 - Not a required OIDF profile. Basic OP remains authorization-code.
