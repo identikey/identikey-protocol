@@ -2,6 +2,7 @@
 
 - [x] Astra advise on this change (protocol blast). Accept before act.
 - [ ] Confirm 1Password stores distinct items for `alice.localhost` and `bob.localhost` (and for two production party hosts when a wildcard name is available). Record the result in the change. Revisit the dev parent if a manager collapses those relying party ids.
+  - 2026-10-25 dev result, Duke, Chrome + 1Password: `http://alice.localhost:3000`, `http://bob.localhost:3000`, and `http://alice.localhost:4000` each saved a passkey. 1Password showed two websites, `alice.localhost` (`holder@alice.localhost`) and `bob.localhost` (`holder@bob.localhost`). The dev parent stays `.localhost`. The port-4000 ceremony did not join the first alice item. It created a second passkey with the same website and the same username, so the two alice passkeys cannot be told apart. The page calls `credentials.create` with `user.name` set to `holder@<host>`, so the port is not in the label. Production hosts are still unchecked.
 - [x] Write `docs/standards/identikey-party-v1.md` from this change's design and delta. Copy the pinned OID arc, the binding order, and the 60-second skew.
 - [x] Add the standard to the table in `docs/standards/README.md`.
 - [x] Add a pointer in `docs/standards/identikey-oidc-urn-grant-v1.md` §7. Leave the WebAuthn rejection in §1 and §5 as it stands.
