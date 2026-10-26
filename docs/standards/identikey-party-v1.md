@@ -88,9 +88,92 @@ origin, the endpoint calls WebAuthn with:
 - `user.id` a stable opaque id for that holder inside that party
 - `user.name` a human label the password manager can show
 
-A second party is a second host and a second passkey. The ceremony
-authorizes the session that enrollment must match. It is not the
-certificate and it is not an identikey-auth `Response`.
+A second party is a second host and a second passkey. `user.name` is
+the label a password manager shows. It is not a second user handle.
+WebAuthn keeps at most one discoverable credential per relying party
+id and user handle on an authenticator. Re-registration can replace
+that credential. The test that saved two indistinguishable
+`alice.localhost` passkeys used a new random `user.id` each time. That
+result does not mean one stable `user.id` keeps two passkeys in one vault.
+
+The browser will not list a vault. Each accepted passkey is a row:
+party host, credential id, stable `user.id`, COSE public key, and the
+`user.name` shown. A row is stored only after WebAuthn registration
+verification succeeds.
+
+### Sign-in
+
+On an active party, and only when the request `Origin` equals the
+registered origin, sign-in is `credentials.get` with `rpId` equal to
+the party host. The server issues a challenge of at least 16 bytes,
+single-use and expiring, bound to this ceremony and this party. The
+60-second skew in §9 applies to that expiry. The enrollment nonce in
+§5 does not protect this assertion.
+
+When the holder is known, `allowCredentials` is the credential ids
+stored for that holder at this party host. When the holder is unknown,
+the allow list is empty. Both ports of one host are the same relying
+party, so they show the same discoverable passkeys.
+
+The server accepts the assertion only after WebAuthn assertion
+verification (WebAuthn Level 3, verifying an authentication assertion).
+The client data type is `webauthn.get`. The challenge and the signed
+origin match this ceremony and the registered origin. `rpIdHash`
+matches the party host. The signature matches the stored public key.
+The user handle is the stable `user.id` stored for that credential.
+When a holder was named, the credential id is one of that holder's.
+The session binds that verified holder. The client allow list is not
+this check.
+
+A replay, a wrong origin or relying party, another holder's credential
+at the same host, or a mismatched user handle fails. `NotAllowedError`
+leaves the person on the page. It does not describe the vault, and it
+does not call `credentials.create`.
+
+### Adding a passkey
+
+`credentials.create` runs only from an add control. The server verifies
+the registration (WebAuthn Level 3, registering a new credential)
+before storing a row.
+
+First registration creates the holder and that holder's stable
+`user.id`. Adding to an existing holder requires a server session
+already authorized for that holder and this party. The pending
+registration, its challenge, and its completion are bound to that
+session. A request that only names the holder does not attach a
+passkey. Completion for a different holder or a different session
+fails. Both add controls use this gate.
+
+Every add uses the holder's stable `user.id` and a `user.name` that
+differs from the names already stored for that holder on that party.
+The ordinary add passes `excludeCredentials` with the stored ids. An
+authenticator that already holds one of those ids does not create
+another. A different authenticator can still create one for the same
+user handle, and both ids stay accepted.
+
+The control for another passkey in the same vault omits
+`excludeCredentials` and still sends a distinct `user.name`. The
+outcome is a new credential id under the same user handle, or a
+replacement of the credential that authenticator already held. This
+standard does not require one vault to retain two passkeys for one
+user handle. The server stores the new id and does not drop other
+accepted ids, because another authenticator may still hold them.
+
+### Signaling accepted credentials
+
+Sign-in succeeds before any signal. The server supplies the complete
+set of credential ids it still accepts for that holder at that party
+host. When `PublicKeyCredential.signalAllAcceptedCredentials` exists,
+the page calls it with the party host, the base64url form of the
+stable user-id bytes, and the base64url form of every raw id in that
+set. A missing function, a rejected call, or a vault that does not
+update leaves the session in place and does not call
+`credentials.create`. A failed read of the accepted set does not call
+the function with an empty list. A successful call is not proof that
+every vault updated.
+
+The ceremony authorizes the party session that enrollment must match.
+It is not the certificate and it is not an identikey-auth `Response`.
 
 ## 5. Enrollment
 
@@ -367,7 +450,9 @@ issuance are a later profile on this slot.
 - Not identikey-auth. The party signing domains
   (`identikey-party-enroll-v1`, `identikey-party-cert-v1`) are not
   auth-challenge payloads.
-- Not a revocation system: no CRL, no OCSP.
+- Not a revocation system: no CRL, no OCSP. A sign-in does not revoke
+  a party certificate. The accepted-passkey set is not a certificate
+  status.
 - Not an intermediate-CA or parent-chain profile.
 
 ## 12. Implementation
