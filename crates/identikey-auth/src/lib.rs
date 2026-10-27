@@ -48,6 +48,7 @@ pub mod error;
 pub mod key;
 pub mod nonce;
 pub mod signer;
+pub mod state;
 pub mod verify;
 
 pub use algorithm::{ClassicalAlg, PqAlg};
@@ -59,6 +60,10 @@ pub use key::{
 };
 pub use nonce::{ChallengeIssuer, InMemoryNonceStore, NonceStore};
 pub use signer::{verify_classical, verify_pq, Signer, SoftwareSigner};
+pub use state::{
+    observe, state_signing_payload, xid_for_control_key, Head, OperationalKey, StateRecord,
+    StateSignatures, Trust, STATE_DOMAIN, STATE_VERSION,
+};
 pub use verify::{verify_response, Verified, VerifyPolicy};
 
 #[cfg(target_os = "macos")]

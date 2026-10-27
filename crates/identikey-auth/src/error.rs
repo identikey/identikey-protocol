@@ -41,6 +41,9 @@ pub enum AuthError {
     #[error("post-quantum signature present without a verifiable key")]
     PqDangling,
 
+    #[error("pq state: {0}")]
+    State(&'static str),
+
     #[error("crypto backend: {0}")]
     Backend(String),
 }
