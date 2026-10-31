@@ -5,18 +5,18 @@
 //! build:
 //!
 //! ```sh
-//! cargo build -p identikey-auth --example ed25519_wrap_demo
+//! cargo build -p identikey-auth --features enclave --example ed25519_wrap_demo
 //! codesign --force --sign "Developer ID Application: …" target/debug/examples/ed25519_wrap_demo
 //! ./target/debug/examples/ed25519_wrap_demo
 //! ```
 //!
 //! Expected: a Touch ID prompt at signing, then `VERIFIED (ed25519)`. macOS-only.
 
-#[cfg(target_os = "macos")]
+#[cfg(all(target_os = "macos", feature = "enclave"))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     use identikey_auth::{
-        verify_response, ChallengeIssuer, ClassicalAlg, InMemoryNonceStore,
-        SecureEnclaveEd25519Signer, Signer, VerifyPolicy,
+        ChallengeIssuer, ClassicalAlg, InMemoryNonceStore, SecureEnclaveEd25519Signer, Signer,
+        VerifyPolicy, verify_response,
     };
 
     let now = 1_000_000u64;
@@ -46,7 +46,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(all(target_os = "macos", feature = "enclave")))]
 fn main() {
-    eprintln!("ed25519_wrap_demo is macOS-only");
+    eprintln!("ed25519_wrap_demo needs --features enclave on macOS");
 }

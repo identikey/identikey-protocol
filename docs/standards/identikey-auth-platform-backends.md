@@ -101,8 +101,12 @@ at rest under an enclave P-256 key (spec §8; tracked separately).
 
 - `security-framework` is at **3.x** but `security-framework-sys` is at **2.x** — they
   version independently; don't pin the sys crate to `3`.
-- Target-gate the platform deps (`[target.'cfg(target_os = "macos")'.dependencies]`) so
-  the base crate stays dependency-lean and `no_std`-friendly elsewhere.
+- Target-gate the platform deps and keep them optional behind the `enclave`
+  feature. macOS (`security-framework`, file keychain) and Linux (`tss-esapi`)
+  turn on with `--features enclave`. A `feature = "..."` key inside
+  `target.'cfg(...)'.dependencies` does not select those crates; declare them
+  `optional = true` and list `dep:…` on the feature. Windows CNG stays on every
+  Windows build.
 - **Edition-2024 `unsafe_op_in_unsafe_fn`**: calling an `unsafe fn` (every `windows`/`NCrypt`
   and `tss-esapi` FFI call) is no longer implicitly allowed inside an `unsafe fn` body —
   you get a warning unless you wrap each call in an explicit `unsafe { }`. Prefer making
@@ -116,7 +120,7 @@ generate → biometric-sign → verify end-to-end from a plain code-signed binar
 entitlement and no `.app` bundle:
 
 ```sh
-cargo build -p identikey-auth --example enclave_demo
+cargo build -p identikey-auth --features enclave --example enclave_demo
 codesign --force --sign "Developer ID Application: …" target/debug/examples/enclave_demo
 ./target/debug/examples/enclave_demo   # expect a biometric prompt, then VERIFIED
 ```

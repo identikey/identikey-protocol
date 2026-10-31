@@ -9,9 +9,16 @@ readme = "README.md"
 
 [features]
 default = []
-# Platform TPM / Secure Enclave signers. Off by default so a verifier
-# (identikey-oidc) does not pull tss-esapi on Linux CI.
-enclave = []
+# Hardware signers. Off by default so a verifier build skips them:
+# Linux gets tss-esapi, macOS gets the Secure Enclave and keychain
+# crates (security-framework), only when this feature is on.
+enclave = [
+    "dep:tss-esapi",
+    "dep:sha2",
+    "dep:security-framework",
+    "dep:security-framework-sys",
+    "dep:core-foundation",
+]
 
 [dependencies]
 # Classical signatures
@@ -28,12 +35,12 @@ rand_core = { workspace = true }
 zeroize = { workspace = true }
 thiserror = { workspace = true }
 
-# macOS Secure Enclave + Touch ID backend (target-gated so the base crate stays lean
-# and dependency-free on other platforms).
+# macOS Secure Enclave + Touch ID, persisted in the file keychain.
+# Optional, same `enclave` feature as the Linux TPM backend.
 [target.'cfg(target_os = "macos")'.dependencies]
-security-framework = "3"
-security-framework-sys = "2.17"
-core-foundation = "0.10"
+security-framework = { version = "3", optional = true }
+security-framework-sys = { version = "2.17", optional = true }
+core-foundation = { version = "0.10", optional = true }
 
 # Windows TPM (CNG Platform Crypto Provider) + Windows Hello backend.
 [target.'cfg(target_os = "windows")'.dependencies]
@@ -44,9 +51,19 @@ windows = { version = "0.62", features = [
 sha2 = "0.10"
 
 # Linux TPM 2.0 backend via the tpm2-tss ESAPI. System deps: tpm2-tss (libtss2-*).
-[target.'cfg(all(target_os = "linux", feature = "enclave"))'.dependencies]
-tss-esapi = "7.7"
-sha2 = "0.10"
+# `tss-esapi` is optional and switched on by the `enclave` feature. A
+# `feature = "..."` key inside `target.'cfg(...)'` does not select deps.
+[target.'cfg(target_os = "linux")'.dependencies]
+tss-esapi = { version = "7.7", optional = true }
+sha2 = { version = "0.10", optional = true }
 
 [dev-dependencies]
 proptest = { workspace = true }
+
+[[example]]
+name = "enclave_demo"
+required-features = ["enclave"]
+
+[[example]]
+name = "ed25519_wrap_demo"
+required-features = ["enclave"]

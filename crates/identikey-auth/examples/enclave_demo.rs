@@ -1,6 +1,7 @@
 //! End-to-end demo of the hardware-enclave + biometric auth path.
 //!
-//! - **macOS**: Secure Enclave P-256 key + Touch ID. Run on a code-signed build
+//! - **macOS**: Secure Enclave P-256 key + Touch ID. Build with `--features enclave`
+//!   and run a code-signed binary
 //!   (`codesign --sign "Developer ID Application: …" target/debug/examples/enclave_demo`).
 //! - **Windows**: TPM-backed P-256 key via the Platform Crypto Provider. Runs headless
 //!   (needs a TPM / vTPM); the ephemeral key uses no Windows Hello prompt.
@@ -8,10 +9,13 @@
 //! Expected output ends with `VERIFIED identity: <fingerprint>`. On other platforms this
 //! example is a no-op.
 
-#[cfg(any(target_os = "macos", target_os = "windows", target_os = "linux"))]
+#[cfg(all(
+    feature = "enclave",
+    any(target_os = "macos", target_os = "windows", target_os = "linux"),
+))]
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     use identikey_auth::{
-        verify_response, ChallengeIssuer, InMemoryNonceStore, Signer, VerifyPolicy,
+        ChallengeIssuer, InMemoryNonceStore, Signer, VerifyPolicy, verify_response,
     };
 
     let now = 1_000_000u64;
@@ -22,12 +26,16 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("issued challenge for audience 'papyrus'");
 
     // 2. Claimant signs it with an ephemeral hardware key (no entitlement / no prompt).
-    #[cfg(target_os = "macos")]
-    let signer = identikey_auth::SecureEnclaveSigner::create_ephemeral("io.identikey.papyrus.device")?;
-    #[cfg(any(target_os = "windows", target_os = "linux"))]
+    #[cfg(all(target_os = "macos", feature = "enclave"))]
+    let signer =
+        identikey_auth::SecureEnclaveSigner::create_ephemeral("io.identikey.papyrus.device")?;
+    #[cfg(all(feature = "enclave", any(target_os = "windows", target_os = "linux")))]
     let signer = identikey_auth::TpmSigner::create_ephemeral()?;
 
-    println!("device fingerprint: {}", signer.classical_public_key().fingerprint());
+    println!(
+        "device fingerprint: {}",
+        signer.classical_public_key().fingerprint()
+    );
     let response = signer.respond(&challenge)?;
     println!("signed challenge with hardware P-256 key");
 
@@ -45,7 +53,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-#[cfg(not(any(target_os = "macos", target_os = "windows", target_os = "linux")))]
+#[cfg(not(all(
+    feature = "enclave",
+    any(target_os = "macos", target_os = "windows", target_os = "linux"),
+)))]
 fn main() {
-    eprintln!("enclave_demo runs on macOS (Secure Enclave), Windows or Linux (TPM) only");
+    eprintln!(
+        "enclave_demo needs --features enclave on macOS (Secure Enclave), Windows, or Linux (TPM)"
+    );
 }
