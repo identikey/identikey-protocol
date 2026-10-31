@@ -11,14 +11,14 @@
 //! (e.g. Recrypt's `pre-*` key material) survive a load+save by a client
 //! that doesn't understand them.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use bc_envelope::prelude::*;
 use std::sync::OnceLock;
 use zeroize::ZeroizeOnDrop;
 
+use super::IDENTIKEY_PARAMS;
 use super::envelope::WalletIdentity;
 use super::format::{KeyPair, WalletParams};
-use super::IDENTIKEY_PARAMS;
 
 const IDENTITY_TYPE: &str = "identikey.identity";
 const IDENTITY_FORMAT_VERSION: u32 = 1;
@@ -111,9 +111,7 @@ impl WalletIdentity for BasicIdentity {
         // they hit the disk. Decoder enforces the same invariant on parse.
         let expected_fp = blake3::hash(&self.ed25519.public);
         if self.fingerprint != *expected_fp.as_bytes() {
-            return Err(anyhow!(
-                "fingerprint does not match Blake3(ed25519-public)"
-            ));
+            return Err(anyhow!("fingerprint does not match Blake3(ed25519-public)"));
         }
 
         let mut subject = Map::new();
@@ -224,7 +222,7 @@ impl WalletIdentity for BasicIdentity {
             _ => {
                 return Err(anyhow!(
                     "Identity envelope has only one of ml-dsa-public/ml-dsa-secret"
-                ))
+                ));
             }
         };
 
@@ -233,9 +231,7 @@ impl WalletIdentity for BasicIdentity {
         let ed25519_secret = ed25519_secret.to_vec();
         let expected_fp = blake3::hash(&ed25519_public);
         if fingerprint != *expected_fp.as_bytes() {
-            return Err(anyhow!(
-                "fingerprint does not match Blake3(ed25519-public)"
-            ));
+            return Err(anyhow!("fingerprint does not match Blake3(ed25519-public)"));
         }
 
         let known = known_predicate_digests();
@@ -336,10 +332,8 @@ pub(crate) mod tests {
     #[test]
     fn unknown_assertion_roundtrips_byte_stably() {
         let mut id = test_identity(3);
-        id.unknown_assertions.push((
-            Envelope::new("pre-backend"),
-            Envelope::new("lattice"),
-        ));
+        id.unknown_assertions
+            .push((Envelope::new("pre-backend"), Envelope::new("lattice")));
         let env = id.to_envelope("alice").unwrap();
         let bytes = env.to_cbor_data();
 

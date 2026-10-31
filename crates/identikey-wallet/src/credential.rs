@@ -5,7 +5,7 @@
 //! environments and testing. The keychain service name and environment
 //! variable names come from the application's [`WalletParams`].
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use base64::Engine;
 use std::sync::RwLock;
 

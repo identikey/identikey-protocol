@@ -900,6 +900,7 @@ dependencies = [
  "ff",
  "generic-array",
  "group",
+ "hkdf",
  "pem-rfc7468",
  "pkcs8 0.10.2",
  "rand_core 0.6.4",
@@ -1265,6 +1266,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "identikey-secret"
+version = "0.1.0"
+dependencies = [
+ "bc-envelope",
+ "blake3",
+ "hex",
+ "rand 0.8.7",
+ "thiserror 2.0.19",
+ "zeroize",
+]
+
+[[package]]
+name = "identikey-share"
+version = "0.1.0"
+dependencies = [
+ "blake3",
+ "chacha20poly1305",
+ "dcbor",
+ "ed25519-dalek",
+ "fips204",
+ "hex",
+ "p256",
+ "rand 0.8.7",
+ "sha2 0.10.9",
+ "thiserror 2.0.19",
+ "x25519-dalek",
+ "zeroize",
+]
+
+[[package]]
 name = "identikey-wallet"
 version = "0.1.0"
 dependencies = [
@@ -1276,6 +1307,7 @@ dependencies = [
  "chacha20poly1305",
  "dialoguer",
  "directories",
+ "identikey-secret",
  "keyring",
  "rand 0.8.7",
  "security-framework",

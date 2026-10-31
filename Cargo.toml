@@ -5,6 +5,8 @@ members = [
     "crates/identikey-auth",
     "crates/identikey-capability",
     "crates/identikey-log",
+    "crates/identikey-secret",
+    "crates/identikey-share",
     "crates/identikey-wallet",
     "ikey",
 ]

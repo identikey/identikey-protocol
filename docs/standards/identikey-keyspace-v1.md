@@ -379,7 +379,10 @@ Suggested path when filled: `docs/standards/vectors/keyspace-v1/`.
 - Recrypt as keyspace identity
 - Biscuit as membership
 - Wallet `"keyspace-membership"` assertion (later, non-authoritative)
-- HPKE; PQ wrap
+- HPKE; PQ KEM wrap
 - Device-key objects on this log
-- Runtime wrap/rotate crate
+- Keyspace epoch rotation as a log consumer. The wrap primitive and payload
+  rewrap live in [`identikey-share`](../../crates/identikey-share) and
+  [`identikey-share-v1.md`](identikey-share-v1.md). That crate does not author
+  `keyspace.*` ops.
 - Lightning Admin UI

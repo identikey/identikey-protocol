@@ -1,0 +1,24 @@
+[package]
+name = "identikey-share"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Multi-recipient ciphertext sharing: KEK-wrap a DEK to encapsulation public keys, optional ML-DSA grant signatures, and an opaque Recrypt capsule slot."
+readme = "README.md"
+
+[dependencies]
+blake3 = { workspace = true }
+chacha20poly1305 = { workspace = true }
+dcbor = "=0.25.2"
+ed25519-dalek = { workspace = true }
+fips204 = "0.4"
+p256 = { version = "0.13", features = ["arithmetic", "ecdh"] }
+rand = { workspace = true }
+sha2 = "0.10"
+thiserror = { workspace = true }
+x25519-dalek = { version = "2", features = ["static_secrets"] }
+zeroize = { workspace = true }
+
+[dev-dependencies]
+hex = { workspace = true }

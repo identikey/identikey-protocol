@@ -10,8 +10,9 @@
 //! implementation, so applications control their own identity envelope
 //! format (and its byte-level stability guarantees).
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use bc_envelope::prelude::*;
+use identikey_secret::SealedSecret;
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
@@ -39,7 +40,7 @@ pub trait WalletIdentity: Sized {
 /// Wallet-level predicates the container codec recognizes. Any other
 /// predicate is treated as an unknown forward-compat assertion and
 /// round-tripped verbatim via `WalletData::unknown_assertions`.
-const KNOWN_PREDICATES: &[&str] = &["active-identity", "identity"];
+const KNOWN_PREDICATES: &[&str] = &["active-identity", "identity", "sealed-secret"];
 
 fn known_predicate_digests() -> &'static [Digest] {
     static CELL: OnceLock<Vec<Digest>> = OnceLock::new();
@@ -93,6 +94,13 @@ fn wallet_to_envelope<I: WalletIdentity>(
         envelope = envelope.add_assertion("identity", id_envelope);
     }
 
+    for secret in wallet.secrets.iter() {
+        let object = secret
+            .to_envelope()
+            .map_err(|e| anyhow!("encode sealed secret: {e}"))?;
+        envelope = envelope.add_assertion("sealed-secret", object);
+    }
+
     // Re-emit unknown wallet-level assertions in their original order so
     // additive spec extensions survive a load+save round-trip.
     for (pred, obj) in &wallet.unknown_assertions {
@@ -144,6 +152,7 @@ fn wallet_from_envelope<I: WalletIdentity>(
 
     let known = known_predicate_digests();
     let mut identities: HashMap<String, I> = HashMap::new();
+    let mut secrets = identikey_secret::MemorySecretStore::new();
     let mut unknown_assertions: Vec<(Envelope, Envelope)> = Vec::new();
     for assertion in envelope.assertions() {
         let (pred, obj) = match (assertion.as_predicate(), assertion.as_object()) {
@@ -165,6 +174,14 @@ fn wallet_from_envelope<I: WalletIdentity>(
             },
             Err(_) => continue,
         };
+        if pred_str == "sealed-secret" {
+            let secret =
+                SealedSecret::from_envelope(&obj).map_err(|e| anyhow!("sealed secret: {e}"))?;
+            secrets
+                .insert_sealed(secret)
+                .map_err(|e| anyhow!("sealed secret: {e}"))?;
+            continue;
+        }
         if pred_str != "identity" {
             continue;
         }
@@ -177,6 +194,7 @@ fn wallet_from_envelope<I: WalletIdentity>(
     Ok(WalletData {
         identities,
         active_identity,
+        secrets,
         unknown_assertions,
     })
 }
@@ -212,7 +230,9 @@ mod tests {
         let mut wallet: WalletData<BasicIdentity> = WalletData::new();
         wallet.active_identity = Some("bob".to_string());
         for (name, seed) in [("alice", 1), ("bob", 2), ("carol", 3)] {
-            wallet.identities.insert(name.to_string(), test_identity(seed));
+            wallet
+                .identities
+                .insert(name.to_string(), test_identity(seed));
         }
 
         let bytes = to_envelope(&wallet, &IDENTIKEY_PARAMS).unwrap();
@@ -224,7 +244,9 @@ mod tests {
     #[test]
     fn determinism_same_input_same_bytes() {
         let mut wallet: WalletData<BasicIdentity> = WalletData::new();
-        wallet.identities.insert("alice".to_string(), test_identity(7));
+        wallet
+            .identities
+            .insert("alice".to_string(), test_identity(7));
         wallet.active_identity = Some("alice".to_string());
 
         let a = to_envelope(&wallet, &IDENTIKEY_PARAMS).unwrap();
@@ -267,6 +289,7 @@ mod tests {
         let wallet: WalletData<BasicIdentity> = WalletData {
             identities: HashMap::new(),
             active_identity: None,
+            secrets: identikey_secret::MemorySecretStore::new(),
             unknown_assertions: vec![(
                 Envelope::new("keyspace-membership"),
                 Envelope::new("future-namespace-value"),

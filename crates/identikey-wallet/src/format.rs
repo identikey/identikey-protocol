@@ -1,12 +1,13 @@
 //! Encrypted wallet file format (`IKEYW` v2) and in-memory data types.
 
-use anyhow::{anyhow, Result};
+use anyhow::{Result, anyhow};
 use argon2::{Algorithm, Argon2, Params, Version};
 use bc_envelope::Envelope;
 use chacha20poly1305::{
-    aead::{Aead, KeyInit},
     XChaCha20Poly1305,
+    aead::{Aead, KeyInit},
 };
+use identikey_secret::MemorySecretStore;
 use rand::RngCore;
 use std::collections::HashMap;
 use zeroize::{Zeroize, ZeroizeOnDrop};
@@ -59,6 +60,8 @@ pub struct WalletData<I> {
     pub identities: HashMap<String, I>,
     /// Active identity name — lives in the wallet, single source of truth.
     pub active_identity: Option<String>,
+    /// Opaque secrets sealed in this wallet. Empty for a wallet that has none.
+    pub secrets: MemorySecretStore,
     /// Wallet-level assertions whose predicates are not known to the
     /// container codec. Preserved verbatim across decode/encode so additive
     /// spec extensions survive a load+save round-trip.
@@ -77,6 +80,7 @@ impl<I> WalletData<I> {
         Self {
             identities: HashMap::new(),
             active_identity: None,
+            secrets: MemorySecretStore::new(),
             unknown_assertions: Vec::new(),
         }
     }
@@ -200,9 +204,9 @@ pub fn encrypt_wallet_with_key_nonce<I: WalletIdentity>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::basic::tests::test_identity;
     use crate::BasicIdentity;
     use crate::IDENTIKEY_PARAMS;
+    use crate::basic::tests::test_identity;
 
     fn encrypt_wallet(data: &WalletData<BasicIdentity>, password: &str) -> Result<Vec<u8>> {
         let mut salt = [0u8; 32];

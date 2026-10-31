@@ -1,10 +1,10 @@
 //! IKEYW v2 fixtures: tests verify AGAINST committed bytes, not merely roundtrip.
 
+use identikey_wallet::IDENTIKEY_PARAMS;
 use identikey_wallet::basic::BasicIdentity;
 use identikey_wallet::format::{
-    decrypt_wallet_with_key, derive_key, extract_salt, encrypt_wallet_with_key_nonce, WalletData,
+    WalletData, decrypt_wallet_with_key, derive_key, encrypt_wallet_with_key_nonce, extract_salt,
 };
-use identikey_wallet::IDENTIKEY_PARAMS;
 
 const PASSWORD: &str = "vector-password";
 const SALT: [u8; 32] = [0x11; 32];
@@ -41,14 +41,9 @@ fn ikeyw_v2_fixture_decrypts() {
 #[test]
 fn ikeyw_v2_fixture_matches_encoder() {
     let key = derive_key(PASSWORD, &SALT).unwrap();
-    let got = encrypt_wallet_with_key_nonce(
-        &vector_wallet(),
-        &key,
-        &SALT,
-        &NONCE,
-        &IDENTIKEY_PARAMS,
-    )
-    .unwrap();
+    let got =
+        encrypt_wallet_with_key_nonce(&vector_wallet(), &key, &SALT, &NONCE, &IDENTIKEY_PARAMS)
+            .unwrap();
     let want = include_bytes!("fixtures/ikeyw-v2.bin");
     assert_eq!(got, want, "IKEYW fixture drifted");
 }
@@ -68,7 +63,8 @@ fn unknown_assertion_survives_load_save() {
     let key = derive_key(PASSWORD, &SALT).unwrap();
     let bytes = include_bytes!("fixtures/ikeyw-v2.bin");
     let data = decrypt_wallet_with_key::<BasicIdentity>(bytes, &key, &IDENTIKEY_PARAMS).unwrap();
-    let again = encrypt_wallet_with_key_nonce(&data, &key, &SALT, &NONCE, &IDENTIKEY_PARAMS).unwrap();
+    let again =
+        encrypt_wallet_with_key_nonce(&data, &key, &SALT, &NONCE, &IDENTIKEY_PARAMS).unwrap();
     let data2 = decrypt_wallet_with_key::<BasicIdentity>(&again, &key, &IDENTIKEY_PARAMS).unwrap();
     assert_eq!(data2.unknown_assertions.len(), 1);
 }
@@ -79,13 +75,8 @@ fn write_fixtures() {
     let dir = std::path::Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/fixtures");
     std::fs::create_dir_all(&dir).unwrap();
     let key = derive_key(PASSWORD, &SALT).unwrap();
-    let bytes = encrypt_wallet_with_key_nonce(
-        &vector_wallet(),
-        &key,
-        &SALT,
-        &NONCE,
-        &IDENTIKEY_PARAMS,
-    )
-    .unwrap();
+    let bytes =
+        encrypt_wallet_with_key_nonce(&vector_wallet(), &key, &SALT, &NONCE, &IDENTIKEY_PARAMS)
+            .unwrap();
     std::fs::write(dir.join("ikeyw-v2.bin"), bytes).unwrap();
 }

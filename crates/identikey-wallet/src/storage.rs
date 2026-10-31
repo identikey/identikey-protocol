@@ -1,17 +1,19 @@
 //! Wallet file management with credential provider integration.
 
-use anyhow::{Context as _, Result};
+use anyhow::{Context as _, Result, anyhow};
 use dialoguer::Password;
 use directories::ProjectDirs;
+use identikey_secret::{SealedSecret, SecretId, SecretMeta, SecretStore};
 use rand::RngCore;
 use std::fs;
 use std::path::PathBuf;
+use std::time::{SystemTime, UNIX_EPOCH};
 use zeroize::Zeroize;
 
-use super::credential::{default_provider_for, CredentialProvider};
+use super::credential::{CredentialProvider, default_provider_for};
 use super::envelope::WalletIdentity;
 use super::format::{
-    decrypt_wallet_with_key, derive_key, encrypt_wallet_with_key, extract_salt, WalletData,
+    WalletData, decrypt_wallet_with_key, derive_key, encrypt_wallet_with_key, extract_salt,
 };
 
 /// Get password from env var or interactive prompt
@@ -115,6 +117,38 @@ impl<I: WalletIdentity> Wallet<I> {
             key,
             salt,
         })
+    }
+
+    /// Seal `value` into this wallet. Call [`Self::save`] to write it.
+    ///
+    /// The secret is stored next to the identikey, inside the same encrypted
+    /// file. Unlocking the wallet reveals it. This is not a redeem grant.
+    pub fn insert_secret(&mut self, label: &str, value: &[u8]) -> Result<SecretId> {
+        let created_at = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+        self.data
+            .secrets
+            .insert(label, value, created_at)
+            .map_err(|e| anyhow!("{e}"))
+    }
+
+    /// A sealed secret held by this wallet.
+    #[must_use]
+    pub fn secret(&self, id: &SecretId) -> Option<&SealedSecret> {
+        self.data.secrets.get(id)
+    }
+
+    /// Labels and commitments. Values are omitted.
+    #[must_use]
+    pub fn secret_meta(&self) -> Vec<SecretMeta> {
+        self.data.secrets.list()
+    }
+
+    /// Drop a secret from memory. Call [`Self::save`] to drop it from disk.
+    pub fn remove_secret(&mut self, id: &SecretId) -> bool {
+        self.data.secrets.remove(id)
     }
 
     /// Save wallet to disk

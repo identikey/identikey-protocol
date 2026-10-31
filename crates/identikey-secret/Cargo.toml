@@ -1,0 +1,18 @@
+[package]
+name = "identikey-secret"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "Opaque secret records for an identikey: path-safe id, salted Blake3 commitment, Gordian Envelope object. The wallet file is the first store."
+readme = "README.md"
+
+[dependencies]
+bc-envelope = { workspace = true }
+blake3 = { workspace = true }
+rand = { workspace = true }
+thiserror = { workspace = true }
+zeroize = { workspace = true }
+
+[dev-dependencies]
+hex = { workspace = true }

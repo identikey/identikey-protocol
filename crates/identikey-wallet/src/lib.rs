@@ -12,7 +12,8 @@
 //! variables, default path) your application uses. [`BasicIdentity`] is the
 //! built-in identity type used by the `ikey` CLI: Ed25519 signing identity,
 //! Blake3 fingerprint, optional ML-DSA-87 post-quantum keypair, and a
-//! forward-compatible bag of app-specific assertions.
+//! forward-compatible bag of app-specific assertions. Opaque secrets live in
+//! the same file under `sealed-secret` (`identikey-secret`).
 
 pub mod basic;
 pub mod credential;
@@ -21,10 +22,13 @@ pub mod format;
 pub mod storage;
 
 pub use basic::BasicIdentity;
-pub use credential::{account_name_for_wallet, default_provider_for, CredentialProvider};
+pub use credential::{CredentialProvider, account_name_for_wallet, default_provider_for};
 pub use envelope::WalletIdentity;
 pub use format::{KeyPair, WalletData, WalletParams};
-pub use storage::{write_secret_file, Wallet};
+pub use identikey_secret::{
+    MemorySecretStore, SealedSecret, SecretCommitment, SecretId, SecretMeta, SecretStore,
+};
+pub use storage::{Wallet, write_secret_file};
 
 /// Wallet parameters for the generic `ikey` tool and IdentiKey applications.
 pub const IDENTIKEY_PARAMS: WalletParams = WalletParams {
@@ -34,8 +38,7 @@ pub const IDENTIKEY_PARAMS: WalletParams = WalletParams {
     env_password: "IDENTIKEY_WALLET_PASSWORD",
     env_key: "IDENTIKEY_WALLET_KEY",
     env_no_keychain: "IDENTIKEY_NO_KEYCHAIN",
-    v1_rejection_msg:
-        "Wallet format v1 is no longer supported. Create a new wallet with `ikey identity new`.",
+    v1_rejection_msg: "Wallet format v1 is no longer supported. Create a new wallet with `ikey identity new`.",
     dir_qualifier: "io",
     dir_organization: "identikey",
     dir_application: "identikey",
