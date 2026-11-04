@@ -14,7 +14,7 @@ pub enum CapabilityError {
     #[error("ed25519 public key must be 32 bytes")]
     PublicLen,
 
-    #[error("token asserts a holder fact; holder must be a check, injected by the verifier")]
+    #[error("token defines holder; only the verifier may inject that fact")]
     HolderFact,
 
     #[error("authorization header is not Bearer biscuit:<base64>")]

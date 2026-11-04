@@ -1,7 +1,7 @@
 //! identikey-capability-v1 fixtures: tests verify AGAINST committed bytes.
 
 use identikey_capability::{
-    authorize, decode_bearer, encode_bearer, parse, public_from_hex, CapabilityError,
+    CapabilityError, authorize, decode_bearer, encode_bearer, parse, public_from_hex,
 };
 
 fn root_public() -> identikey_capability::PublicKey {
