@@ -17,17 +17,16 @@ pub use biscuit_auth::{Biscuit, KeyPair, PublicKey};
 pub use error::CapabilityError;
 
 use biscuit_auth::{
+    PrivateKey,
     builder::Algorithm,
     macros::{authorizer, biscuit, block},
-    PrivateKey,
 };
 use identikey_auth::{ClassicalAlg, ClassicalPublicKey};
 
 /// Official Blake3 empty-string digest (FIPS 202 / BLAKE3 vectors).
 pub const EMPTY_BLAKE3: [u8; 32] = [
-    0xAF, 0x13, 0x49, 0xB9, 0xF5, 0xF9, 0xA1, 0xA6, 0xA0, 0x40, 0x4D, 0xEA, 0x36, 0xDC, 0xC9,
-    0x49, 0x9B, 0xCB, 0x25, 0xC9, 0xAD, 0xC1, 0x12, 0xB7, 0xCC, 0x9A, 0x93, 0xCA, 0xE4, 0x1F,
-    0x32, 0x62,
+    0xAF, 0x13, 0x49, 0xB9, 0xF5, 0xF9, 0xA1, 0xA6, 0xA0, 0x40, 0x4D, 0xEA, 0x36, 0xDC, 0xC9, 0x49,
+    0x9B, 0xCB, 0x25, 0xC9, 0xAD, 0xC1, 0x12, 0xB7, 0xCC, 0x9A, 0x93, 0xCA, 0xE4, 0x1F, 0x32, 0x62,
 ];
 
 /// Blake3-256 of `data`.
@@ -95,7 +94,8 @@ pub fn keypair_from_private_hex(hex_str: &str) -> Result<KeyPair, CapabilityErro
 /// Parse an Ed25519 public key from hex.
 pub fn public_from_hex(hex_str: &str) -> Result<PublicKey, CapabilityError> {
     let bytes = hex::decode(hex_str.trim()).map_err(|e| CapabilityError::Key(e.to_string()))?;
-    PublicKey::from_bytes(&bytes, Algorithm::Ed25519).map_err(|e| CapabilityError::Key(e.to_string()))
+    PublicKey::from_bytes(&bytes, Algorithm::Ed25519)
+        .map_err(|e| CapabilityError::Key(e.to_string()))
 }
 
 /// Mint a root token whose authority block is `right(<resource>, <operation>);`.
@@ -129,10 +129,7 @@ pub fn parse(bytes: &[u8], root_public: PublicKey) -> Result<Biscuit, Capability
 /// Append `check if holder($fp), $fp == "<fp>";`. Cannot widen.
 pub fn append_holder_check(tok: &Biscuit, fp: &str) -> Result<Vec<u8>, CapabilityError> {
     let next = tok
-        .append(block!(
-            r#"check if holder($fp), $fp == {fp};"#,
-            fp = fp,
-        ))
+        .append(block!(r#"check if holder($fp), $fp == {fp};"#, fp = fp,))
         .map_err(|e| CapabilityError::Biscuit(e.to_string()))?;
     next.to_vec()
         .map_err(|e| CapabilityError::Biscuit(e.to_string()))
@@ -179,10 +176,11 @@ pub fn authorize(
         .map_err(|e| CapabilityError::Biscuit(e.to_string()))
 }
 
-/// True when any block **asserts** `holder(...)` rather than checking it.
+/// Reject a `holder` fact or a rule that can mint one.
 ///
-/// `query_all` reads facts from every block. A check that mentions `holder`
-/// is not a fact, and neither is the string `holder(` inside another fact.
+/// `query_all` only returns facts that already hold. A same-block rule such
+/// as `holder("victim") <- time($t)` is invisible until the verifier adds
+/// `time` or a proved holder, so the rule itself has to fail closed.
 fn reject_holder_facts(tok: &Biscuit) -> Result<(), CapabilityError> {
     let mut authorizer = tok
         .authorizer()
@@ -190,11 +188,14 @@ fn reject_holder_facts(tok: &Biscuit) -> Result<(), CapabilityError> {
     let hits: Vec<(String,)> = authorizer
         .query_all("data($h) <- holder($h)")
         .map_err(|e| CapabilityError::Biscuit(e.to_string()))?;
-    if hits.is_empty() {
-        Ok(())
-    } else {
-        Err(CapabilityError::HolderFact)
+    if !hits.is_empty() {
+        return Err(CapabilityError::HolderFact);
     }
+    let (_facts, rules, _checks, _policies) = authorizer.dump();
+    if rules.iter().any(|rule| rule.head.name == "holder") {
+        return Err(CapabilityError::HolderFact);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -264,7 +265,10 @@ mod tests {
         let a = token_identity(b"lightning-admin/token/v1", raw).unwrap();
         let b = token_identity(b"other-profile/token/v1", raw).unwrap();
         assert_ne!(a, b);
-        assert_ne!(a, token_identity(b"lightning-admin/token/v1", b"biscuit-byteS").unwrap());
+        assert_ne!(
+            a,
+            token_identity(b"lightning-admin/token/v1", b"biscuit-byteS").unwrap()
+        );
         // Without the NUL, "ab"||"c..." and "a"||"bc..." can collide.
         // The separator keeps those profiles apart.
         let split = token_identity(b"ab", b"c-token").unwrap();
@@ -295,6 +299,41 @@ mod tests {
             .to_vec()
             .unwrap();
         match parse(&extra, root.public()) {
+            Err(CapabilityError::HolderFact) => {}
+            other => panic!("expected HolderFact, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn holder_rule_waiting_on_verifier_facts_is_rejected() {
+        let root = KeyPair::new();
+        let tok = biscuit!(
+            r#"
+            right("example", "read");
+            check if holder($fp), $fp == "victim";
+            holder("victim") <- time($t);
+            "#
+        )
+        .build(&root)
+        .unwrap();
+        match parse(&tok.to_vec().unwrap(), root.public()) {
+            Err(CapabilityError::HolderFact) => {}
+            other => panic!("expected HolderFact, got {other:?}"),
+        }
+
+        let minted = mint_right(&root, "example", "read").unwrap();
+        let base = parse(&minted, root.public()).unwrap();
+        let appended = base
+            .append(block!(
+                r#"
+                check if holder($fp), $fp == "victim";
+                holder("victim") <- holder("attacker");
+                "#
+            ))
+            .unwrap()
+            .to_vec()
+            .unwrap();
+        match parse(&appended, root.public()) {
             Err(CapabilityError::HolderFact) => {}
             other => panic!("expected HolderFact, got {other:?}"),
         }

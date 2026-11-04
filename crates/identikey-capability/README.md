@@ -2,7 +2,7 @@
 
 Protocol-tier mint/verify for [IdentiKey Capability Tokens v1](../../docs/standards/identikey-capability-v1.md).
 
-Biscuit, Ed25519 authority, monotonic attenuation, holder **checks** (never `holder` facts). Wire + validators only — no HTTP, no login profiles, no tokenator, no Mjolnir Datalog schema.
+Biscuit, Ed25519 authority, monotonic attenuation, holder **checks** (never a `holder` fact or a rule that mints one). Wire + validators only — no HTTP, no login profiles, no tokenator, no Mjolnir Datalog schema.
 
 ```rust
 use identikey_capability::{append_holder_check, authorize, mint_right, new_keypair, parse};

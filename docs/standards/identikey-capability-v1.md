@@ -210,7 +210,9 @@ A Biscuit that authorizes `redeem` of a foreign secret SHALL name
 the holder that may perform it. v1 holder class is a single
 Identikey public key. The token SHALL carry a holder **check**
 (`check if holder($fp), $fp == "<fingerprint>"`) and SHALL NOT
-assert a `holder` fact in any block. Fingerprint is the Blake3
+assert a `holder` fact in any block. A rule whose head predicate is
+`holder` is the same defect and SHALL be rejected: it can mint the
+fact once the verifier adds `time` or a proved holder. Fingerprint is the Blake3
 identity fingerprint from auth-challenge v1 §5. A verifier SHALL
 NOT treat possession of the token bytes as sufficient. It SHALL
 verify a signature by that key over a single signed tuple (token
