@@ -15,3 +15,5 @@ authorize(&held, root.public(), Some("FP"), "example", "read").unwrap();
 ```
 
 Secret commitments take a caller domain: `secret_commit(b"app/secret-commit/v1", salt, secret)`. Do not hardcode a product domain in this crate.
+
+Token identity is `token_identity(domain, raw_biscuit_bytes)`: Blake3 of the domain, a NUL, and the exact received bytes. Do not re-serialize the token first. The datalog holder atom is lowercase hex of the §5 fingerprint.
