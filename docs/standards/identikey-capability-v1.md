@@ -218,9 +218,22 @@ identity, verifier-chosen nonce, audience; plus a response key if
 the profile seals the release), compute the fingerprint from the
 presented `{alg, key}`, inject the `holder(<fingerprint>)`
 **fact** (verifier-injected only), then evaluate the Biscuit. A
-failed holder proof SHALL fail closed. Encoding of the tuple and
-the definition of token identity stay with Mjolnir
-`add-biscuit-runtime` / `ikp-6yz.2`.
+failed holder proof SHALL fail closed.
+
+The datalog atom is the lowercase hex of the 32-byte fingerprint.
+Base58 remains the display form and is not the atom.
+
+Token identity is:
+
+```
+token_identity = Blake3( domain || 0x00 || raw_token_bytes )
+```
+
+`domain` is a non-empty profile string with no NUL byte. `raw_token_bytes`
+are the exact Biscuit bytes after transport decoding. A verifier SHALL NOT
+parse and re-serialize the token before hashing. `identikey_capability::token_identity`
+computes this. The rest of the signed tuple (verifier nonce, audience,
+optional response key) stays an application profile.
 
 This requirement SHALL NOT apply to other agency profiles unless
 those profiles add it. A root VM-exec Biscuit without a holder

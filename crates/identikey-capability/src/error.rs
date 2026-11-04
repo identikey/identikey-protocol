@@ -19,4 +19,7 @@ pub enum CapabilityError {
 
     #[error("authorization header is not Bearer biscuit:<base64>")]
     Bearer,
+
+    #[error("token identity needs a non-empty domain with no NUL and the exact raw token bytes")]
+    TokenIdentity,
 }

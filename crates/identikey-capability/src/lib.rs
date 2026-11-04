@@ -49,6 +49,24 @@ pub fn holder_fingerprint(ed25519_pub: &[u8]) -> Result<[u8; 32], CapabilityErro
     Ok(*pk.fingerprint().as_bytes())
 }
 
+/// Identity of the exact received Biscuit bytes.
+///
+/// `Blake3(domain || 0x00 || raw_token)`. `domain` is a caller profile string
+/// and must not contain a NUL. `raw_token` is the binary after transport
+/// decoding. Do not parse and re-serialize the token before hashing.
+/// Re-serialization changes the digest. The rest of a signed request
+/// (nonce, audience, response key) stays with the application profile.
+pub fn token_identity(domain: &[u8], raw_token: &[u8]) -> Result<[u8; 32], CapabilityError> {
+    if domain.is_empty() || domain.contains(&0) || raw_token.is_empty() {
+        return Err(CapabilityError::TokenIdentity);
+    }
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(domain);
+    hasher.update(&[0x00]);
+    hasher.update(raw_token);
+    Ok(*hasher.finalize().as_bytes())
+}
+
 /// Domain-separated secret commitment: `Blake3(domain || salt || secret)`.
 ///
 /// `domain` is a caller argument. Product profiles pass their own
@@ -162,21 +180,21 @@ pub fn authorize(
 }
 
 /// True when any block **asserts** `holder(...)` rather than checking it.
+///
+/// `query_all` reads facts from every block. A check that mentions `holder`
+/// is not a fact, and neither is the string `holder(` inside another fact.
 fn reject_holder_facts(tok: &Biscuit) -> Result<(), CapabilityError> {
-    let src = tok.to_string();
-    for line in src.lines() {
-        let t = line.trim();
-        if t.is_empty() || t.starts_with("//") {
-            continue;
-        }
-        if t.starts_with("check ") || t.starts_with("check if ") {
-            continue;
-        }
-        if t.contains("holder(") {
-            return Err(CapabilityError::HolderFact);
-        }
+    let mut authorizer = tok
+        .authorizer()
+        .map_err(|e| CapabilityError::Biscuit(e.to_string()))?;
+    let hits: Vec<(String,)> = authorizer
+        .query_all("data($h) <- holder($h)")
+        .map_err(|e| CapabilityError::Biscuit(e.to_string()))?;
+    if hits.is_empty() {
+        Ok(())
+    } else {
+        Err(CapabilityError::HolderFact)
     }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -238,6 +256,48 @@ mod tests {
         let i = bad.len() / 2;
         bad[i] ^= 0xff;
         assert!(parse(&bad, root.public()).is_err());
+    }
+
+    #[test]
+    fn token_identity_separates_domain_from_bytes() {
+        let raw = b"biscuit-bytes";
+        let a = token_identity(b"lightning-admin/token/v1", raw).unwrap();
+        let b = token_identity(b"other-profile/token/v1", raw).unwrap();
+        assert_ne!(a, b);
+        assert_ne!(a, token_identity(b"lightning-admin/token/v1", b"biscuit-byteS").unwrap());
+        // Without the NUL, "ab"||"c..." and "a"||"bc..." can collide.
+        // The separator keeps those profiles apart.
+        let split = token_identity(b"ab", b"c-token").unwrap();
+        let other = token_identity(b"a", b"bc-token").unwrap();
+        assert_ne!(split, other);
+        assert!(token_identity(b"a\0b", raw).is_err());
+        assert!(token_identity(b"", raw).is_err());
+        assert!(token_identity(b"profile", b"").is_err());
+    }
+
+    #[test]
+    fn holder_mention_inside_another_fact_is_not_a_holder_fact() {
+        let root = KeyPair::new();
+        let tok = biscuit!(r#"right("example", "read"); note("see holder(x)");"#)
+            .build(&root)
+            .unwrap();
+        parse(&tok.to_vec().unwrap(), root.public()).unwrap();
+    }
+
+    #[test]
+    fn appended_holder_fact_is_rejected() {
+        let root = KeyPair::new();
+        let minted = mint_right(&root, "example", "read").unwrap();
+        let tok = parse(&minted, root.public()).unwrap();
+        let extra = tok
+            .append(block!(r#"holder("aa");"#))
+            .unwrap()
+            .to_vec()
+            .unwrap();
+        match parse(&extra, root.public()) {
+            Err(CapabilityError::HolderFact) => {}
+            other => panic!("expected HolderFact, got {other:?}"),
+        }
     }
 
     #[test]
