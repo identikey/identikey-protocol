@@ -25,7 +25,10 @@ one-key, one-approval case. Every key must be a valid, non-weak Ed25519
 verification key. Signatures use strict Ed25519 verification.
 
 The fixture profile trusts one independent, non-equivocating settlement
-witness, named by the effective checkpoint. This is a one-member witness set.
+witness, named by the effective checkpoint. The verifier MUST reject a witness
+key equal to any owner key. Separate keys establish key separation only. The
+caller must independently establish that the witness operator is independent
+of the owners. This is a one-member witness set.
 It assumes a durable, serialized record of consumption. The fixture supplies
 its signatures so an offline implementation can verify the transcript.
 Bootstrapping checkpoint trust, producing live settlement records, rotating
