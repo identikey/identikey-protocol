@@ -2,7 +2,7 @@
 
 - [x] Human decision: group XID derived from the founding entry, or the ADR-013 inception key with a binding proof. Decided 2026-11-26: founding entry. Recorded in `steer.md`.
 - [x] Human decision: reissue `forgejo-ci-owner-v1` as a grant scope, or keep its own transcript. Decided 2026-11-26: reissue. Recorded in `steer.md`.
-- [ ] Advise on this change (protocol blast). Accept before act. The reader checks the reading of ADR-013 decision 4 in `design.md`, "Head and freshness", and the five author's calls listed in `steer.md` under "Auto-logged".
+- [ ] Advise on this change (protocol blast). Accept before act. The reader checks the reading of ADR-013 decision 4 in `design.md`, "Head and freshness", and the five NAOMS-derived rules listed in `steer.md` under "Decided".
 - [ ] Spike H1: co-sign one `identikey-log` op with two non-actor keys and verify each. Record the result in `design.md`.
 - [ ] Write `docs/standards/identikey-group-v1.md` from this change's design and delta. Copy the domain labels, the body maps, and the fixed limits.
 - [ ] Add the standard to the table in `docs/standards/README.md`.

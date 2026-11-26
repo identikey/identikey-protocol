@@ -21,16 +21,8 @@
   amendment is a separate change there.
 - `forgejo-ci-owner-v1` is reissued as a grant scope (user,
   2026-11-26). A follow-up change in this repo.
-
-## Auto-logged
-
-- Spec path `docs/standards/identikey-group-v1.md`. Capability
-  `identikey-group`. No `openspec/specs/` living tree in this repo.
-- New kinds are `group.*`. Keyspace v1 kinds and bytes are untouched.
-- Public-read logs only in v1. `visibility` reserved.
-- Shared keys and secret release are a later change.
-- From the NAOMS hive read (author's calls, not yet confirmed by the
-  user; advise should test each):
+- From the NAOMS hive read, proposed by the author and confirmed by
+  the user on 2026-11-26:
   - `k` may be a number, `majority`, or `all`.
   - Incoming governing members and new keys sign the entry that adds
     them.
@@ -39,6 +31,14 @@
   - Every entry after the founding one expires, and a receipt carries
     the witness's time.
   - A stranded rule stays unmet. No recovery path bypasses a rule.
+
+## Auto-logged
+
+- Spec path `docs/standards/identikey-group-v1.md`. Capability
+  `identikey-group`. No `openspec/specs/` living tree in this repo.
+- New kinds are `group.*`. Keyspace v1 kinds and bytes are untouched.
+- Public-read logs only in v1. `visibility` reserved.
+- Shared keys and secret release are a later change.
 
 ## Skipped / still open
 

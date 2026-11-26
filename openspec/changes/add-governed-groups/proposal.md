@@ -7,6 +7,12 @@
 Steer residue is `steer.md` in this change (2026-11-26). Protocol blast.
 Advise is owed before act. Nothing here is activated.
 
+Preparation 2026-11-26: revised. Inputs are the user's two decisions
+(founding-entry XID, Forgejo profile reissued as a grant scope) and the
+NAOMS hive read, both recorded in `steer.md`. The contract at `d3f4a01`
+plus this note is the one advise reads. Authority: the user asked for
+change, then architecture review. No activation was given.
+
 ## Why
 
 Two integrations stalled at the same question. Mjolnir must decide whether
