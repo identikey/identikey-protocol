@@ -76,9 +76,12 @@ SHALL be verifiable without resolving any member's own XID document.
 
 ### Requirement: Quorum authorization per action
 The policy SHALL name a rule of the form `k` of `role` for `roster` and
-for `policy`, and MAY name one for `delegate` and for `revoke`. An entry
-SHALL be approved only when valid signatures over that entry come from
-keys of at least `k` distinct members holding `role` in the state before
+for `policy`, and MAY name one for `delegate` and for `revoke`. `k`
+SHALL be a number, `majority`, or `all`. With `n` distinct members
+holding `role` in the state before the entry, the number needed SHALL
+be `k` itself, `floor(n/2) + 1`, or `n` respectively. An entry SHALL be
+approved only when valid signatures over that entry come from keys of
+at least that many distinct members holding `role` in the state before
 the entry. The proposer SHALL be a member. A signature by a key outside
 the roster SHALL NOT count. An action with no rule SHALL be
 unavailable. The founding entry SHALL meet its own `policy` rule against
@@ -99,6 +102,17 @@ its own roster.
 - WHEN one owner and one key that is not in the roster sign an entry
 - THEN the entry is not approved
 
+#### Scenario: Majority follows the roster
+- GIVEN a `policy` rule of `majority` of `owner` and five owners
+- WHEN two owners sign a `group.policy` entry
+- THEN the entry is not approved
+- AND it is approved once a third owner signs
+
+#### Scenario: All means every holder
+- GIVEN a `policy` rule of `all` of `owner` and four owners
+- WHEN three owners sign a `group.policy` entry
+- THEN the entry is not approved
+
 #### Scenario: Founding without its quorum
 - GIVEN a founding entry whose `policy` rule is 2 of `owner`
 - WHEN only one of its listed owners has signed it
@@ -109,11 +123,15 @@ its own roster.
 - WHEN a `group.delegate` entry is signed by every member
 - THEN verification rejects it
 
-### Requirement: Role changes need the rules they affect
-A `group.roster` entry that changes which members hold a role SHALL
-satisfy, in addition to the `roster` rule, every rule that names that
-role. An entry SHALL be rejected when, in the resulting state, any rule
-names more members than hold its role or names zero.
+### Requirement: Role and key changes need the rules they affect
+A `group.roster` entry that changes which members hold a role, or that
+changes the keys of a member who holds a role, SHALL satisfy, in
+addition to the `roster` rule, every rule that names that role. An
+entry SHALL be rejected when, in the resulting state, the role of any
+rule has no holder, or a numeric `k` is zero or greater than the number
+of distinct members holding its role. A rule that too few holders
+remain to meet SHALL stay unmet. No entry and no mechanism SHALL lower
+it for them.
 
 #### Scenario: Admin mints an owner
 - GIVEN rules `roster` 1 of `admin` and `policy` 2 of `owner`
@@ -122,13 +140,78 @@ names more members than hold its role or names zero.
 
 #### Scenario: Owners add an owner
 - GIVEN the same rules and a signer who holds both `admin` and `owner`
-- WHEN that signer and a second owner sign an entry that gives a member the `owner` role
+- WHEN that signer, a second owner, and a key of the member sign an entry that gives the member the `owner` role
 - THEN the entry is approved
+
+#### Scenario: Admin re-keys an owner
+- GIVEN rules `roster` 1 of `admin` and `policy` 2 of `owner`
+- WHEN one admin alone signs an entry that replaces an owner's keys with a key the admin holds
+- THEN verification rejects it
+
+#### Scenario: Owners re-key an owner who lost a key
+- GIVEN a `policy` rule of 2 of `owner`, a `roster` rule of 2 of `owner`, and three owners, one of whom lost every key
+- WHEN the other two owners and the replacement key sign an entry that sets that owner's keys to the replacement
+- THEN the entry is approved
+
+#### Scenario: Too few holders remain
+- GIVEN a `policy` rule of 2 of `owner` and two owners, one of whom lost every key
+- WHEN the remaining owner signs a `group.policy` entry that lowers the rule to 1
+- THEN the entry is not approved and the group keeps its last state
 
 #### Scenario: Removal would strand a rule
 - GIVEN a `policy` rule of 2 of `owner` and exactly two owners
 - WHEN an approved entry would drop one of them
 - THEN verification rejects it
+
+### Requirement: Incoming control signs
+A governing role SHALL be a role that a rule names in the policy in
+force after the entry. Every key that a `group.found` or `group.roster`
+entry adds under a member who holds a governing role SHALL sign that
+entry. A member who gains a governing role in an entry SHALL sign it
+with at least one of that member's keys. Such a signature SHALL count
+toward a rule only when its member held the rule's role before the
+entry.
+
+#### Scenario: Owner named without consent
+- GIVEN a founding entry that lists three owners
+- WHEN keys of only two of them have signed it
+- THEN verification rejects the founding entry
+
+#### Scenario: New owner has not signed
+- GIVEN a `group.roster` entry that adds a member with the `owner` role and enough owner approvals
+- WHEN no key of the new member has signed it
+- THEN verification rejects it
+
+#### Scenario: A key that was never shown to work
+- GIVEN a `group.roster` entry that adds a second key to an existing owner
+- WHEN that second key has not signed the entry
+- THEN verification rejects it
+
+#### Scenario: Acceptance is not approval
+- GIVEN a `roster` rule of 2 of `owner` and an entry that adds a new owner
+- WHEN one existing owner and the new member sign it
+- THEN the entry is not approved
+
+#### Scenario: Member with no governing role
+- GIVEN a role that no rule names
+- WHEN an approved `group.roster` entry adds a member with only that role and the member has not signed
+- THEN the entry is approved
+
+### Requirement: An entry expires
+Every entry after the founding entry SHALL carry an expiry time in Unix
+seconds. A receipt whose time is later than the entry's expiry SHALL
+NOT be a settlement record. An approval SHALL NOT be reusable on any
+other entry.
+
+#### Scenario: Stale proposal completed late
+- GIVEN an entry one owner signed, whose expiry has passed
+- WHEN a second owner signs it and the witness receipt carries a time after the expiry
+- THEN the entry is not effective
+
+#### Scenario: Settled in time
+- GIVEN an approved entry and a witness receipt whose time is before the entry's expiry
+- WHEN a verifier replays the log long after the expiry
+- THEN the entry is effective
 
 ### Requirement: A witness receipt settles an entry
 Approval SHALL NOT make an entry effective. An entry SHALL be effective
@@ -136,10 +219,14 @@ only when it is valid, approved, and carries a receipt by the witness
 key of the policy in force before it. The receipt SHALL be a strict
 Ed25519 signature over the label `identikey/group/settle/v1`, one zero
 byte, the group XID, the sequence as an unsigned 64-bit big-endian
-integer, and the entry's content hash. The founding entry SHALL be
+integer, the entry's content hash, and the settlement time in Unix
+seconds as an unsigned 64-bit big-endian integer. A receipt's time
+SHALL NOT be earlier than the receipt time of the entry's parent. The
+time SHALL NOT enter the state digest. The founding entry SHALL be
 settled by the witness it names. An approved entry with no receipt
-SHALL be pending. Two settlement records at one sequence SHALL freeze
-the group at the predecessor, in either arrival order. A receipt on an
+SHALL be pending. Two settlement records for different entries at one
+sequence SHALL freeze the group at the predecessor, in either arrival
+order. A receipt on an
 entry that fails validation SHALL NOT be a settlement record. The
 witness SHALL NOT be able to author an entry.
 
@@ -162,6 +249,11 @@ witness SHALL NOT be able to author an entry.
 - GIVEN an entry that lacks its quorum and carries a witness receipt
 - WHEN a verifier replays the log
 - THEN the entry is rejected and the receipt does not block a valid entry at that sequence
+
+#### Scenario: Receipt dated before its parent
+- GIVEN a settled entry whose receipt time is T
+- WHEN the next entry's receipt carries a time earlier than T
+- THEN that receipt is not a settlement record
 
 #### Scenario: Witness signs as a member
 - GIVEN a policy whose witness key also appears as a member key
@@ -195,7 +287,8 @@ only when that entry meets the `policy` rule.
 A head SHALL be a strict Ed25519 signature by the current witness over
 the label `identikey/group/head/v1`, one zero byte, the group XID, the
 sequence, the entry's content hash, a time in Unix seconds, and a
-32-byte nonce. A verifier SHALL retain the highest head it has accepted
+32-byte nonce. A head's time SHALL NOT be earlier than the receipt time
+of the entry it names. A verifier SHALL retain the highest head it has accepted
 for a group and SHALL refuse a log that does not extend it. A relying
 party that installs a durable binding SHALL require its own nonce in
 the head and SHALL spend that nonce on install. A log that verifies
@@ -275,7 +368,7 @@ A policy SHALL declare its authorization, settlement, and secret-release
 mechanisms. Group v1 SHALL accept `quorum-v1`, `witness-v1`, and `none`
 respectively, and `visibility` `public`. Any other value SHALL be
 rejected. A roster SHALL hold at most 256 members. An entry SHALL carry
-at most 64 approvals and SHALL be at most 65,536 bytes signed. Evidence
+at most 64 signatures and SHALL be at most 65,536 bytes signed. Evidence
 over a limit SHALL be rejected and SHALL NOT be truncated. No failure
 SHALL fall back to a single administrator.
 
@@ -284,7 +377,12 @@ SHALL fall back to a single administrator.
 - WHEN a v1 verifier reads it
 - THEN it rejects the group
 
-#### Scenario: Too many approvals
+#### Scenario: Unknown threshold form
+- GIVEN a policy whose rule carries a `k` that is not a number, `majority`, or `all`
+- WHEN a v1 verifier reads it
+- THEN it rejects the entry
+
+#### Scenario: Too many signatures
 - GIVEN an entry that carries 65 signatures
 - WHEN a verifier reads it
 - THEN it rejects the entry and does not count the first 64

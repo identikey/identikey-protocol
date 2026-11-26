@@ -66,11 +66,10 @@ the same XID is a conflict" holds only for a verifier that has seen both.
 Deriving the XID from the founding entry removes the rival. A different
 founding entry is a different XID.
 
-This is a changed commitment in another repo. It is recorded as a human
-decision in `steer.md` and as an owed task. If the decision goes the
-other way, the "Group identifier" requirement in the delta is replaced
-by the inception-key construction and every verifier is configured with
-the XID and the founding entry hash.
+Decided 2026-11-26 (user): the group XID is derived from the founding
+entry. That changes a commitment in another repo. Amending ADR-013
+decision 1 and the living requirement "Stable collective XID" is a
+separate change in identikey-core.
 
 The `identikey-log` content hash of the founding entry (blake3) remains
 the log's internal id for parent links. It is not a second public
@@ -99,7 +98,7 @@ Member  := { "xid": bstr,          ; 32 bytes
              "keys": [+ bstr],     ; 32-byte Ed25519, the member's approval keys
              "roles": [+ tstr] }
 
-Rule    := { "k": uint, "role": tstr }
+Rule    := { "k": uint / "majority" / "all", "role": tstr }
 
 Policy  := { "mech": { "auth": "quorum-v1",
                        "settle": "witness-v1",
@@ -115,13 +114,18 @@ State   := { "seq": uint, "roster": [Member], "policy": Policy,
 
 FoundBody    := { "v": 1, "salt": bstr, "roster": [Member],
                   "policy": Policy, "state": bstr }
-RosterBody   := { "group": bstr, "seq": uint, ? "set": [Member],
-                  ? "drop": [bstr], "state": bstr }
-PolicyBody   := { "group": bstr, "seq": uint, "policy": Policy,
-                  ? "keep": [bstr], "state": bstr }
-DelegateBody := { "group": bstr, "seq": uint, "grant": bstr, "state": bstr }
-RevokeBody   := { "group": bstr, "seq": uint, "grant": bstr, "state": bstr }
+RosterBody   := { "group": bstr, "seq": uint, "exp": uint,
+                  ? "set": [Member], ? "drop": [bstr], "state": bstr }
+PolicyBody   := { "group": bstr, "seq": uint, "exp": uint,
+                  "policy": Policy, ? "keep": [bstr], "state": bstr }
+DelegateBody := { "group": bstr, "seq": uint, "exp": uint,
+                  "grant": bstr, "state": bstr }
+RevokeBody   := { "group": bstr, "seq": uint, "exp": uint,
+                  "grant": bstr, "state": bstr }
 ```
+
+`exp` is Unix seconds. It is the last moment the entry may be settled
+(see "Expiry"). The founding entry has none.
 
 Bodies are canonical dCBOR. Unknown keys fail. `roster` is sorted by
 `xid`, `grants` and `keys` bytewise. `set` replaces a member whose `xid`
@@ -134,8 +138,8 @@ noticing, and a later light client can start from a settled entry and
 its state. `State` does not contain the XID, so the founding entry can
 carry it.
 
-Limits are fixed in v1: 256 members, 64 approvals on one entry, 65,536
-bytes for one signed entry. Larger evidence is rejected, not truncated.
+Limits are fixed in v1: 256 members, 64 signatures on one entry
+(approvals and acceptances together), 65,536 bytes for one signed entry. Larger evidence is rejected, not truncated.
 
 ## Roster
 
@@ -148,32 +152,53 @@ keys on one member are several devices of one principal.
   The quorum that admitted the member vouches for that link. A relying
   party that wants more resolves the member's own XID document.
 
-A member's key change is an ordinary `group.roster` entry. Self-service
-re-keying by the member is not in v1.
+A member's key change is a `group.roster` entry. The group approves
+it, and the role and key guard below applies. A member cannot re-key its own
+seat alone: a holder of a copied key could then sign a rival rotation
+first.
 
 Roles are labels with no built-in order. A member may hold several.
 
+On the wire `xid` is 32 bytes, and the log never proves the link from a
+key to it. In v1 it is the member's XID. A later profile can put a
+group-scoped identifier there for members who should not be linkable
+across groups, without changing these bytes. That belongs with private
+logs and is not in v1.
+
 ## Authorization: quorum(k, role)
 
-An entry is approved when valid signatures over it come from keys of at
-least `k` distinct members who hold `role` in the state before the
-entry. `Op.actor` is the proposer and must be a member key. Its
-signature counts like any other. Signatures by keys outside the roster
-do not count and do not invalidate.
+An entry is approved when valid signatures over it come from keys of
+enough distinct members who hold `role` in the state before the entry.
+With `n` such members, enough is:
+
+| `k` | Needed |
+|---|---|
+| a number | that number |
+| `"majority"` | `floor(n/2) + 1` |
+| `"all"` | `n` |
+
+A number goes stale as the roster grows. A group declared as "everyone
+agrees" and written as `k: 2` is 2-of-9 seven members later. The two
+named forms are recomputed from the roster at every entry.
+
+`Op.actor` is the proposer and must be a member key. Its signature
+counts like any other. Signatures by keys outside the roster do not
+count and do not invalidate.
 
 | Entry | Rule |
 |---|---|
 | `group.found` | its own `policy` rule, against its own roster |
-| `group.roster` | `roster`, plus the role guard below |
+| `group.roster` | `roster`, plus the role and key guard below |
 | `group.policy` | `policy` |
 | `group.delegate` | `delegate` |
 | `group.revoke` | `revoke` |
 
 An absent `delegate` or `revoke` rule makes that action unavailable.
 
-The founding entry must meet its own `policy` rule. A 2-of-3 group is
-founded with two owners' signatures. That is the incoming-control
-evidence ADR-013 asks for.
+The founding entry is signed by every key of every member who holds a
+governing role (see "Acceptance"). That meets its own `policy` rule, and
+it is the incoming-control evidence ADR-013 asks for. A founder cannot
+name an owner who has not agreed.
 
 Coverage of the options discussed in steer:
 
@@ -182,26 +207,76 @@ Coverage of the options discussed in steer:
 | One authoritative key | `k: 1`, one holder |
 | Any member | `k: 1`, role held by all |
 | Counted signatures | `k: n`, role held by owners |
+| Majority or unanimity | `k: "majority"` or `k: "all"` |
 | FROST | same rule, later, with one aggregate signature as evidence |
 | Contract | later, as a `settle` mechanism |
 
-### Role guard
+### Role and key guard
 
 Roles have no order, so "you cannot grant a role above your own" is
 restated without one:
 
-A `group.roster` entry that changes which members hold role `R` must
-also satisfy every rule that names `R`.
+A `group.roster` entry that changes which members hold role `R`, or
+that changes the keys of a member who holds `R`, must also satisfy
+every rule that names `R`.
 
 To gain the power to pass a rule, the group must already pass that
 rule. An admin under `roster: 1 of admin` cannot mint owners when
-`policy` is `2 of owner`.
+`policy` is `2 of owner`. The same admin cannot put its own key on an
+owner's seat. Dropping a member changes who holds that member's roles.
 
 ### Lockout guard
 
-An entry is rejected when, in the resulting state, any rule has `k`
-greater than the number of distinct members holding its role, or `k` is
-zero. FOKS offers this as an opt-in. Here it always applies.
+An entry is rejected when, in the resulting state, any rule's role has
+no holder, or a numeric `k` is zero or greater than the number of
+distinct members holding the role. FOKS offers this as an opt-in. Here
+it always applies.
+
+### Acceptance
+
+A governing role is a role that a rule names in the policy in force
+after the entry.
+
+- Every key that a `group.found` or `group.roster` entry adds under a
+  member who holds a governing role signs that entry.
+- A member who gains a governing role in the entry signs it with at
+  least one of its keys.
+
+Nobody is given a governing role without agreeing to it, and no key
+counts toward a rule before it has been shown to work. An acceptance
+signature is not an approval. It counts toward a rule only when its
+member already held the rule's role before the entry.
+
+A `group.policy` entry does not ask for acceptance from holders of a
+role it newly names. An earlier quorum admitted those members.
+
+### Expiry
+
+An approval cannot be withdrawn. Without a limit, a proposal one owner
+signed and abandoned could be completed months later by a second
+signature, including one from a key stolen in the meantime.
+
+Every entry after the founding one carries `exp`. A receipt whose time
+is later than `exp` is not a settlement record. An expired proposal is
+dead. Its signers sign a new one if they still want it. Silence and
+lapse never approve.
+
+### Lost keys
+
+A member who loses a key is re-keyed by the other holders: a
+`group.roster` entry under the `roster` rule and the role and key
+guard, signed by the new key. The lost key takes no part.
+
+When too few holders are left to meet a rule, that rule cannot be met
+and nothing lowers it. The group keeps its last state. Live grants run
+to their expiry, and a head can still be signed. If the stranded rule
+is `policy` or `roster`, the group cannot recover, and its members
+found a new group under a new XID. v1 has no recovery path that
+bypasses a rule, because any such path is a second, weaker rule.
+
+Tooling should say when a rule has no slack: one lost member strands
+it. That is always so for `"all"`, and for a role with one holder. A
+sole owner should list two keys held in different places.
 
 ## Settlement: witness-v1
 
@@ -210,11 +285,18 @@ successor per predecessor.
 
 ```
 receipt = Ed25519(
-  "identikey/group/settle/v1" 0x00 || xid || seq:u64 || entry_hash )
+  "identikey/group/settle/v1" 0x00
+  || xid || seq:u64 || entry_hash || time:u64 )
 ```
 
-`entry_hash` is the entry's `identikey-log` content hash. Integers are
+`entry_hash` is the entry's `identikey-log` content hash. `time` is the
+witness's clock at settlement, in Unix seconds. Integers are
 big-endian. Verification is strict Ed25519.
+
+A receipt's time is not later than the entry's `exp` and not earlier
+than the receipt time of the entry's parent. The time dates the entry
+for a reader. It is the witness's statement and is not part of the
+state digest.
 
 - The witness validates an entry before it signs. It signs at most one
   entry per `(xid, seq)`.
@@ -222,8 +304,8 @@ big-endian. Verification is strict Ed25519.
   predecessor.
 - One receipt on a valid, approved entry is a settlement record. That
   entry is effective.
-- Two settlement records at one sequence freeze the group at the
-  predecessor. Arrival order does not choose.
+- Two settlement records for different entries at one sequence freeze
+  the group at the predecessor. Arrival order does not choose.
 - A receipt on an entry that fails validation is not a settlement
   record. It is evidence of a faulty witness.
 - The founding entry is settled by the witness it names.
@@ -238,7 +320,8 @@ the witness key and from every member key.
 
 ```
 exit_receipt = Ed25519(
-  "identikey/group/exit/v1" 0x00 || xid || seq:u64 || entry_hash )
+  "identikey/group/exit/v1" 0x00
+  || xid || seq:u64 || entry_hash || time:u64 )
 ```
 
 An exit receipt is admissible on one kind of entry only: a
@@ -262,7 +345,8 @@ head = Ed25519(
   || xid || seq:u64 || entry_hash || time:u64 || nonce )
 ```
 
-`nonce` is 32 bytes. All zero means the head answers no challenge.
+`nonce` is 32 bytes. All zero means the head answers no challenge. A
+head's time is not earlier than the receipt time of the entry it names.
 
 - A verifier keeps the highest head it has accepted per XID. It refuses
   a log that does not extend that head.
@@ -313,9 +397,12 @@ one. Capability semantics at the relying service stay with
 `forgejo-ci-owner-v1` signs its own byte transcript and needs a trusted
 checkpoint as input. Under this design the same decision is a grant with
 `scope.kind` `forgejo-ci-owner`, the instance hostname, and the numeric
-organization id, and its trusted inputs come from replay. Recommended:
-reissue the profile on that basis. The profile is marked experimental
-and has no production binding. Not owed by this change.
+organization id, and its trusted inputs come from replay.
+
+Decided 2026-11-26 (user): reissue the profile as a grant scope. The
+profile is marked experimental and has no production binding. The
+reissue is a follow-up change in this repo once this contract is
+accepted, and the verifier in identikey-core is reworked after it.
 
 ## Transport
 
@@ -323,6 +410,7 @@ and has no production binding. Not owed by this change.
 LogBundle := { "v": 1,
                "entries": [ { "op": bstr,          ; signed envelope
                               "by": "witness" / "exit",
+                              "time": uint,
                               "receipt": bstr } ],
                ? "head": { "seq": uint, "entry": bstr, "time": uint,
                            "nonce": bstr, "sig": bstr } }
@@ -369,13 +457,69 @@ the failing evidence. Collection, discovery, and storage sit outside.
   needs the witness here, because one owner can have two devices and an
   outside verifier needs freshness either way.
 
+**NAOMS** (hives; the TypeScript original and the Rust rewrite, read
+2026-11-26 from the design docs, the roadmap, `spec/crates/chain.md`,
+`spec/modules/mod-hives.md`, and `crates/chain/src/trust.rs`).
+
+NAOMS built groups on threshold group keys first and wrote down what
+that cost. It is the closest prior art for the governance half.
+
+- Governance in the rewrite is a closed rule set counted over distinct
+  persons: `AnySteward`, `StewardThreshold(n)`, `Majority`,
+  `Consensus`, `Consent`. That is `quorum(k, role)`. The rewrite still
+  uses threshold keys for branch signers and group key generation. It
+  does not use them to decide who approved.
+- In the original, a hive that declared "consensus" was keyed at
+  threshold 1, so one member could change its rules and only
+  application code objected. The fix was a threshold formula recomputed
+  on every member add, because a fixed number "saturates". Taken as the
+  `"majority"` and `"all"` forms of `k`.
+- Recorded costs of signing with a threshold key: the dealer sees the
+  whole key, every member add is a reshare, a new member could not sign
+  until a later fix, and one dropped co-signer aborts the round.
+  Confirms delegate-first.
+- A removed founder kept write access because a reducer returned early
+  on the creator's identity. The rewrite's rule: nothing keys on who
+  created the hive. Here there is no founder key at all.
+- The hive's identity is its chain, not a key, so that a rotation does
+  not orphan what the hive issued. Same reasoning as the founding-entry
+  XID.
+- Nobody enters without invite and accept, and a recovered key carries
+  its own proof of possession. Taken as "Acceptance".
+- Lost-key recovery is attested by a quorum of stewards, the lost key
+  takes no part, and the steward who writes the record cannot name its
+  own key as the replacement. Taken as the role and key guard and
+  "Lost keys".
+  An unreachable threshold is shown and never clamped. Taken.
+- A proposal lapses after a fixed lifetime, and "silence is never a
+  yes". Taken as `exp`.
+- The rule class belongs to the entry's kind and never to the author's
+  choice. Already so here.
+- Forks came from two entitled writers each choosing the next sequence
+  number, and from in-process callers that skipped the authorization
+  gate. One witness, one predecessor per entry, and one verifier
+  function cover both.
+- A decision is judged only after the node has an up-to-date view of
+  the chain. That is the head freshness rule.
+- Members sign under a per-hive pseudonym, never the root identity.
+  Retrofitting that produced field defects. Not taken in v1. The roster
+  note above keeps the bytes compatible.
+- Not taken: consent by silence, proposals and votes as separate
+  entries, a percentage threshold. For later, with keys: removal and
+  key rotation as one all-or-none step, and a removal preview that
+  lists what else ends.
+
 ## Open decisions
 
-1. XID derivation (above). Human decision, then a core amendment.
-2. Forgejo profile rebasing (above).
-3. Whether adding a member to a role that a rule names should require
-   that member's own signature as proof of possession. Not required in
-   v1. The lockout guard counts holders, not working keys.
+1. FROST, Registry settlement, private logs with group-scoped member
+   identifiers, and groups as members stay for later changes.
+2. Whether `"majority"` should be the default that tooling proposes for
+   `policy` and `roster`. Recommended: yes. It is 1 of 1 for a sole
+   owner and grows with the roster.
+
+Settled: the XID derivation and the Forgejo profile (2026-11-26, user).
+Proof of possession for incoming holders is now required (see
+"Acceptance").
 
 ## Unverified hypotheses
 

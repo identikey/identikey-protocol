@@ -34,8 +34,13 @@ change specifies the wire for that object.
   kinds, one predecessor per entry.
 - Roster principals are member XIDs with their current approval keys.
 - One authorization mechanism, `quorum(k, role)`, evaluated per action.
-- Settlement by a witness receipt per entry, a witness-signed head for
-  freshness, and an exit witness that can settle only a witness
+  `k` is a number, `majority`, or `all`.
+- Incoming governing members and new keys sign the entry that adds
+  them. A change to a member's keys needs every rule that names a role
+  the member holds.
+- Every entry after the founding one expires.
+- Settlement by a dated witness receipt per entry, a witness-signed
+  head for freshness, and an exit witness that can settle only a witness
   replacement.
 - Delegate-first action: the log records the digest of a detached,
   scoped, expiring grant. The group holds no signing key in v1.
@@ -52,8 +57,9 @@ Capabilities: `identikey-group` (ADDED). `identikey-keyspace`,
   `identikey-core/openspec/specs/keyspace-governance/spec.md` describe a
   key-derived guild XID with a separate binding proof. This change
   derives the XID from the founding entry instead. That is a changed
-  commitment. It needs a human decision and a core amendment before act
-  (see `design.md`, "Identifier").
+  commitment, decided by the user on 2026-11-26 (see `design.md`,
+  "Identifier"). The core amendment is a separate change in
+  identikey-core and is owed before this standard is relied on there.
 
 ## User journey & surfaces
 
@@ -88,8 +94,9 @@ group evidence.
   mechanism in v1.
 - Member-only (private) logs. `visibility` is reserved with one value.
 - Groups as members of groups, and nesting.
-- Rebasing `forgejo-ci-owner-v1` onto a grant scope. Recommended in
-  `design.md`. Tracked as a follow-up once this contract is accepted.
+- Reissuing `forgejo-ci-owner-v1` as a grant scope. Decided by the user
+  on 2026-11-26. A follow-up change in this repo once this contract is
+  accepted, then a rework of the verifier in identikey-core.
 - identikey-core registrar (replica, proposal inbox, witness), HTTP
   routes, the CLI, the managed-account approval ceremony, and an OP
   token whose `sub` is a group XID. Product work in identikey-core.

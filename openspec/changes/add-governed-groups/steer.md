@@ -1,6 +1,6 @@
 # steer add-governed-groups
 
-**When.** 2026-11-25 and 2026-11-26
+**When.** 2026-11-25 and 2026-11-26 (two passes on the 26th)
 **Depth.** standard
 
 ## Decided
@@ -16,6 +16,11 @@
   default now: a hash chain (user).
 - The first `identikey` group is founded with Duke's XID as the only
   owner. A second owner follows shortly (user).
+- The group XID is derived from the founding entry (user, 2026-11-26).
+  This departs from identikey-core ADR-013 decision 1. The core
+  amendment is a separate change there.
+- `forgejo-ci-owner-v1` is reissued as a grant scope (user,
+  2026-11-26). A follow-up change in this repo.
 
 ## Auto-logged
 
@@ -24,25 +29,33 @@
 - New kinds are `group.*`. Keyspace v1 kinds and bytes are untouched.
 - Public-read logs only in v1. `visibility` reserved.
 - Shared keys and secret release are a later change.
+- From the NAOMS hive read (author's calls, not yet confirmed by the
+  user; advise should test each):
+  - `k` may be a number, `majority`, or `all`.
+  - Incoming governing members and new keys sign the entry that adds
+    them.
+  - The role guard also covers a change to the keys of a member who
+    holds the role. Before this, an admin could re-key an owner's seat.
+  - Every entry after the founding one expires, and a receipt carries
+    the witness's time.
+  - A stranded rule stays unmet. No recovery path bypasses a rule.
 
 ## Skipped / still open
 
-- **XID derivation.** `design.md` derives the group XID from the
-  founding entry. ADR-013 in identikey-core says a dedicated inception
-  key plus a binding proof. Recommended: founding-entry derivation.
-  Human decision owed.
-- **Forgejo profile.** Keep `forgejo-ci-owner-v1` as its own transcript,
-  or reissue it as a grant scope. Recommended: reissue. No production
-  binding exists yet.
 - FROST, Registry settlement, private logs, groups as members.
+- Group-scoped member identifiers (NAOMS writes a per-hive pseudonym,
+  never the root identity). Not in v1. The roster bytes already allow
+  it. Decide with private logs.
+- Whether tooling proposes `majority` as the default rule.
 
 ## Feeds change
 
 Write `add-governed-groups` as the architecture change for this
 protocol landing. Wire: founding-entry XID, linear witnessed log, member
-XIDs with keys, `quorum(k, role)` per action, witness receipt and head,
-exit witness, detached grants.
+XIDs with keys, `quorum(k, role)` per action with numeric and formula
+thresholds, acceptance by incoming holders, entry expiry, witness
+receipt and head, exit witness, detached grants.
 
 Research read for this change: FOKS (go-foks `05a7027`, white paper
-`3860270`) and the Eudaemon white paper. What each contributed is in
-`design.md`, "Prior art".
+`3860270`), the Eudaemon white paper, and NAOMS hives (original and
+Rust rewrite). What each contributed is in `design.md`, "Prior art".
