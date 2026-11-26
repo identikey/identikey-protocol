@@ -7,12 +7,12 @@
   - [ ] R1 Ordered consumption for a durable binding. Human decision owed.
   - [ ] R2 Policy replacement and the per-rule protection. Human decision owed.
   - [ ] R3 Acceptance when a policy change makes a role governing. Human decision owed.
-  - [ ] R4 A complete, deterministic reducer and state definition.
-  - [ ] R5 The exact signed bytes and the signature verification profile.
+  - [x] R4 A complete, deterministic reducer and state definition. Amended in `design.md` "Reducer" and the delta "Replay is a total function of the entries".
+  - [x] R5 The exact signed bytes and the signature verification profile. Amended in `design.md` "Entry envelope" and "Signatures" and the delta "Member signatures are exact". H1 restated.
   - [ ] R6 Witness exit, freshness trust, and freeze semantics. Human decision owed.
   - [ ] R7 The lockout guard and the signature budget. Follows R3.
-  - [ ] R8 A requirement-by-requirement map to the core governance contract.
-  - [ ] R9 Receipt identity when one entry has receipts with different times.
+  - [x] R8 A requirement-by-requirement map to the core governance contract. Added as `design.md` "Map to the core governance contract". Its R1 and R6 rows stay open.
+  - [x] R9 Receipt identity when one entry has receipts with different times. Receipt times are no longer compared. Amended in `design.md` "Settlement" and the delta.
 - [ ] Fresh advise after preparation
 - [ ] Spike H1: co-sign one `identikey-log` op with two non-actor keys and verify each. Record the result in `design.md`.
 - [ ] Write `docs/standards/identikey-group-v1.md` from this change's design and delta. Copy the domain labels, the body maps, and the fixed limits.
@@ -22,7 +22,7 @@
 
 Out of scope, not owed here:
 
-- Amending identikey-core ADR-013 decision 1 and the living requirement "Stable collective XID". A core change. The XID decision is made.
+- Amending identikey-core: the living requirements "Stable collective XID", "Collective control evidence", and "Handoff phases are independently abortable", and the ADR-013 text that points at them. A core change. The XID decision is made.
 - Reissuing `forgejo-ci-owner-v1` as a grant scope. A follow-up change in this repo after this standard is accepted, then the verifier rework in identikey-core.
 - Spike H2 (a `bc-xid` document with no inception key). Belongs to the core change that projects a group XID document.
 - identikey-core registrar, HTTP routes, the `ikey group` CLI, the managed-account approval ceremony.

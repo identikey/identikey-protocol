@@ -47,12 +47,19 @@ Consequences:
 - The identifier's link to the founding entry rests on a hash, not on a
   classical signature.
 - Roster, rule, key, and witness changes do not move the XID.
+- The hash authenticates the founding entry. It does not show that a
+  given log is current. Currentness rests on the witness and a fresh
+  head (see "Head and freshness").
 
-### Why this departs from ADR-013 decision 1
+### Why this departs from the accepted identity construction
 
-ADR-013 gives the guild a dedicated inception key. The XID is the hash
-of that key, and a binding proof signed by that key ties the XID to a
-keyspace genesis.
+ADR-013 decision 1 says the guild XID is a stable identity distinct
+from a keyspace lineage. The construction is in the accepted core
+design and the living requirements "Stable collective XID" and
+"Collective control evidence": a dedicated inception key, the XID as
+the hash of that key, and a binding proof signed by it that ties the
+XID to a keyspace genesis. This change replaces that construction. It
+keeps the decision: the group XID is still not a keyspace id.
 
 A private key cannot be shown to have been destroyed. A founder who
 keeps the inception key can, after a full handoff, sign a second
@@ -77,8 +84,8 @@ identifier.
 
 ## Log
 
-Entries are `identikey-log` ops. Signatures use the log's existing
-attached, plural signatures over a stable content hash.
+Entries are `identikey-log` ops (format version 4) with attached,
+plural signatures.
 
 | Kind | Role |
 |---|---|
@@ -92,6 +99,57 @@ The log is a chain, not a DAG. Each entry after the founding one has
 exactly one parent, the previous settled entry, and `seq` equal to the
 parent's plus one. Two entries with one parent are a fork. They are
 never merged. An unknown kind stops replay at its predecessor.
+
+### Entry envelope
+
+A group entry is an op with exactly this shape. Anything else fails.
+
+- `kind`: one of the five above.
+- `body`: present. The canonical dCBOR of the body map for that kind.
+- `parent_hashes`: empty for `group.found`, exactly one otherwise.
+- `deps` and `nacks`: empty. `target_fp` and `timestamp`: absent.
+- `hlc`: present, as the log requires. This standard does not read it.
+- No elided assertion, no salted assertion, and no assertion the log
+  codec does not define. The codec skips an elided assertion and
+  re-encodes to a different hash, so a group verifier rejects any entry
+  whose decode reports an elision.
+
+Three values come from the unsigned envelope. They are different bytes.
+
+| Name | Definition | Used for |
+|---|---|---|
+| entry bytes | canonical CBOR of the unsigned envelope (`codec::encode`) | the XID, as `founding_bytes` |
+| `entry_hash` | BLAKE3 of the entry bytes (`codec::content_hash`) | parent links, receipts, heads |
+| `sign_digest` | SHA-256 Gordian digest of the wrapped unsigned envelope (`to_envelope(op).wrap().digest()`) | what members sign |
+
+### Signatures
+
+- Every attached signature is Ed25519 over the 32-byte `sign_digest`.
+  It is not over `entry_hash`. Any other algorithm fails in v1,
+  including ML-DSA.
+- Verification is strict Ed25519, and every key is a valid, non-weak
+  Ed25519 verification key. This is the same profile as receipts and as
+  `forgejo-ci-owner-v1`.
+- The candidate keys for an entry are the keys in the roster before the
+  entry, plus the keys the entry adds. For the founding entry they are
+  the keys of the founding roster.
+- Signatures carry no key identifier. Transport supplies one key per
+  signature, in wire order (`keys` in the bundle). Signature `i` must
+  verify under key `i`. Key `i` must be a candidate key. No key appears
+  twice. If any of these fails, the entry as presented is rejected.
+  That verdict is about the evidence. It says nothing about the group.
+- `Op.actor` is the proposer. It is a key of a member in the state
+  before the entry (for the founding entry, in the founding roster),
+  and it is one of the signers.
+- A signature by a key of a member in the state before the entry is an
+  approval. It counts once per member, however many of that member's
+  keys sign, toward each rule whose role the member held in that state.
+- A signature by a key the entry adds is an acceptance.
+
+The log crate's generic `verify` checks every signature against
+`Op.actor`. It rejects any co-signed group entry. A group verifier does
+not call it. It reads the signatures and the digest and applies the
+rules above.
 
 ```
 Member  := { "xid": bstr,          ; 32 bytes
@@ -127,19 +185,66 @@ RevokeBody   := { "group": bstr, "seq": uint, "exp": uint,
 `exp` is Unix seconds. It is the last moment the entry may be settled
 (see "Expiry"). The founding entry has none.
 
-Bodies are canonical dCBOR. Unknown keys fail. `roster` is sorted by
-`xid`, `grants` and `keys` bytewise. `set` replaces a member whose `xid`
-is already present and adds one that is not. `drop` names member XIDs.
-
 `state` is `SHA-256` of the canonical dCBOR of `State` after the entry
 is applied. A verifier whose replay gives a different digest rejects the
 entry. Two implementations in different languages cannot drift without
-noticing, and a later light client can start from a settled entry and
-its state. `State` does not contain the XID, so the founding entry can
-carry it.
+noticing. `State` does not contain the XID, so the founding entry can
+carry it. A v1 verifier replays from the founding entry. Starting from
+a later entry needs a trust anchor this standard does not define.
 
-Limits are fixed in v1: 256 members, 64 signatures on one entry
-(approvals and acceptances together), 65,536 bytes for one signed entry. Larger evidence is rejected, not truncated.
+Limits are fixed in v1: 256 members, 8 keys per member, 64 signatures
+on one entry (approvals and acceptances together), 65,536 bytes for one
+signed entry. Larger evidence is rejected, not truncated.
+
+### Reducer
+
+Replay is a function of the entries alone. It reads no clock and no
+grant body. `State.grants` is the set of standing grants: digests
+issued and not since revoked or voided. Whether a standing grant can be
+used now is a separate question that needs its body and a clock (see
+"Grants").
+
+Shape rules, for every body and for `State`:
+
+- Every map is closed. An unknown key at any depth fails.
+- Every array is sorted ascending and has no duplicate: `roster` and
+  `set` by `xid`; `keys`, `drop`, `grants`, and `keep` bytewise; `roles`
+  bytewise as UTF-8. dCBOR does not sort arrays, so this standard does.
+- An optional array that would be empty is omitted. A present empty
+  array fails. `keys` and `roles` are never empty.
+- `xid`, `group`, a key, a grant digest, and `state` are 32 bytes. The
+  founding `salt` is 16 bytes.
+- A role is 1 to 32 bytes from `a-z`, `0-9`, and `-`.
+- Integers are unsigned and fit in 64 bits.
+- `group` is the XID. `seq` is the prior `seq` plus one.
+- An entry whose result equals the prior state apart from `seq` fails.
+
+Transitions:
+
+| Kind | Result |
+|---|---|
+| `group.found` | `seq` 0, the given roster and policy, no grants |
+| `group.roster` | Members in `drop` are removed. Members in `set` replace a member with the same `xid` or are added. |
+| `group.policy` | The policy is replaced. `grants` becomes `keep`, or empty when `keep` is absent. |
+| `group.delegate` | `grant` is added to `grants`. |
+| `group.revoke` | `grant` is removed from `grants`. |
+
+Each of these fails:
+
+- A `group.roster` entry with neither `set` nor `drop`.
+- An `xid` in both `set` and `drop`.
+- A `drop` that names no present member.
+- A `set` member identical to the member already present.
+- A `keep` digest that is not in the prior `grants`. A voided or
+  revoked grant cannot be restored by `keep`.
+- A `group.delegate` whose digest is already standing.
+- A `group.revoke` whose digest is not standing.
+
+There are no tombstones. A digest that was revoked or voided may be
+delegated again, under the `delegate` rule. That is a new issuance of
+the same body, and the state alone is enough to continue replay.
+
+The guards in "Authorization" then apply to the result.
 
 ## Roster
 
@@ -181,9 +286,8 @@ A number goes stale as the roster grows. A group declared as "everyone
 agrees" and written as `k: 2` is 2-of-9 seven members later. The two
 named forms are recomputed from the roster at every entry.
 
-`Op.actor` is the proposer and must be a member key. Its signature
-counts like any other. Signatures by keys outside the roster do not
-count and do not invalidate.
+`Op.actor` is the proposer. It must be a member key and it must sign.
+Its signature counts like any other.
 
 | Entry | Rule |
 |---|---|
@@ -199,6 +303,10 @@ The founding entry is signed by every key of every member who holds a
 governing role (see "Acceptance"). That meets its own `policy` rule, and
 it is the incoming-control evidence ADR-013 asks for. A founder cannot
 name an owner who has not agreed.
+
+Every signature attached to an entry must be attributable (see
+"Signatures"). A signature by a key outside the candidate keys rejects
+the entry as presented. It is not skipped.
 
 Coverage of the options discussed in steer:
 
@@ -293,10 +401,19 @@ receipt = Ed25519(
 witness's clock at settlement, in Unix seconds. Integers are
 big-endian. Verification is strict Ed25519.
 
-A receipt's time is not later than the entry's `exp` and not earlier
-than the receipt time of the entry's parent. The time dates the entry
-for a reader. It is the witness's statement and is not part of the
-state digest.
+A settlement record for an entry is any receipt that verifies under
+the admissible key over that entry's transcript with `time` not later
+than the entry's `exp`. The founding entry has no `exp`, and any time
+settles it.
+
+Several receipts for one entry are one settlement record, whatever
+their times, and whether they come from the witness or, where the exit
+key is admissible, from the exit key. A retry by the witness is
+harmless. A bundle carries one receipt per entry, and which one it
+carries does not change replay. Receipt times are never compared with
+each other, with a parent's receipt, or with a head. The time dates the
+entry for a reader. It is the witness's statement and is not part of
+the state digest.
 
 - The witness validates an entry before it signs. It signs at most one
   entry per `(xid, seq)`.
@@ -346,7 +463,9 @@ head = Ed25519(
 ```
 
 `nonce` is 32 bytes. All zero means the head answers no challenge. A
-head's time is not earlier than the receipt time of the entry it names.
+verifier rejects a head whose time is more than 300 seconds ahead of
+its own clock. A head's age is the verifier's clock minus the head's
+time.
 
 - A verifier keeps the highest head it has accepted per XID. It refuses
   a log that does not extend that head.
@@ -375,13 +494,16 @@ The log carries the digest. The holder carries the body and presents
 it. A public log then shows that a grant exists and not who holds it or
 what it covers.
 
-A grant is live at a head when all hold:
+A grant is standing when its digest is in `State.grants`. A grant is
+live for a relying party when all hold:
 
-- a settled `group.delegate` entry carries its digest
-- no later settled `group.revoke` names it
-- every later settled `group.policy` entry lists it in `keep`
-- `nbf <= now <= exp`
+- its digest is standing in the state at the head
+- the presented body hashes to that digest, and its `group` is the XID
+- `nbf <= exp`, and `nbf <= now <= exp`
 - the head is no older than `head_age` seconds
+
+The grant `salt` is 16 bytes. `head_age` is at least 1. A body that
+breaks these shapes is never live.
 
 A policy change voids earlier grants unless it restates them. That is
 ADR-013's "a delegation dies at handoff unless the incoming policy
@@ -407,14 +529,28 @@ accepted, and the verifier in identikey-core is reworked after it.
 ## Transport
 
 ```
-LogBundle := { "v": 1,
-               "entries": [ { "op": bstr,          ; signed envelope
-                              "by": "witness" / "exit",
-                              "time": uint,
-                              "receipt": bstr } ],
-               ? "head": { "seq": uint, "entry": bstr, "time": uint,
-                           "nonce": bstr, "sig": bstr } }
+Settled      := { "op": bstr,             ; signed envelope
+                  "keys": [+ bstr],       ; one per signature, wire order
+                  "by": "witness" / "exit",
+                  "time": uint,
+                  "receipt": bstr }
+
+LogBundle    := { "v": 1,
+                  "entries": [+ Settled],
+                  ? "rival": [+ Settled],
+                  ? "head": { "seq": uint, "entry": bstr, "time": uint,
+                              "nonce": bstr, "sig": bstr } }
 ```
+
+`entries` is the whole chain in order, from sequence 0, with no gap. A
+bundle that starts later or skips a sequence is rejected. `rival`
+carries settled entries that compete with an entry in the chain at the
+same sequence. A verifier checks a rival exactly as it checks a chain
+entry, against the state at that sequence's predecessor. A rival that
+verifies is a second settlement record there.
+
+A proposal that is not yet settled does not travel in a bundle. It is
+the signed op and its `keys`, checked against the state at the head.
 
 A bundle is self-verifying. Any copy is as good as another: the OP, a
 mesh hub, a git repository, a file. Where a bundle is served is a
@@ -426,6 +562,35 @@ Input: the group XID, a bundle, the verifier's stored head for that XID
 if any, the current time, and optionally a nonce and a grant body.
 Output: accept with state and head, pending, conflict, or reject with
 the failing evidence. Collection, discovery, and storage sit outside.
+
+## Map to the core governance contract
+
+Each living requirement in
+`identikey-core/openspec/specs/keyspace-governance/spec.md`, and what
+this wire does with it. "Core amendment" means the core text must
+change before core relies on this standard.
+
+| Core requirement | Here |
+|---|---|
+| Explicit selectable governance | Implemented. The policy names three mechanisms, unknown ones fail closed, and the founding entry is the signed bootstrap. |
+| Exact transition authorization | Implemented. A signature covers the kind, the group XID, the sequence, the parent (the prior accepted state), the action, and the resulting state digest. Distinct principals are counted under the prior policy. |
+| Full governance handoff | Implemented for roster and policy. No group key exists, so no key is retired. |
+| Optional predeclared recovery | Restricted. The only predeclared path is the exit key, and it replaces the witness and nothing else. Lost authority leaves governance unavailable, as the requirement allows. |
+| Conflict and settlement semantics | Implemented by `witness-v1`. |
+| Stable collective XID | Core amendment. The XID comes from the founding entry, and v1 binds no keyspace. |
+| Governed collective action and identity control | Restricted to delegation. No group signing or authentication. Disclosure the requirement asks for: no party holds a whole secret, and ordering relies on one operator. |
+| Registry authority is independent of discovery | No Registry. The statement it requires: the ordering authority of `witness-v1` is a single operator. |
+| Version cut rejects legacy administering | Deferred. No keyspace v1 log is migrated here. |
+| Collective control evidence | Core amendment. There is no identity document, binding proof, or keyspace checkpoint. The evidence is the XID, the log, and a head. |
+| Handoff phases are independently abortable | Restricted. v1 has no secret and no control key to put into effect, so the four phases are: prepare is the unsigned entry, authorize is its signatures, effect is empty, and activate is settlement. An entry is abandoned before activation by letting it expire. The full machine returns with key release. Core amendment to admit this restricted profile. |
+| Finality gates secret release | Settlement half implemented. Release is `none`. |
+| Adapter evidence is one transition | Implemented. Four verdicts, stated maxima, and every receipt and head commits to one entry hash. |
+| Freshness witness for new authority | Open. See review item R1. |
+| Pre-activation effects are not current | Nothing is staged in v1. A pending entry has no effect. |
+| Migration finality is the outgoing descriptor | A witness replacement is settled by the outgoing witness. The exit path is the exceptional recovery "the predecessor policy already authorized". No incoming-readiness evidence is asked of the new witness. Open under review item R6. |
+
+Nothing downstream should rely on this standard for collective control
+of an identity document until the three core amendments land.
 
 ## Prior art
 
@@ -523,12 +688,16 @@ Proof of possession for incoming holders is now required (see
 
 ## Unverified hypotheses
 
-- **H1.** Claim: `identikey-log` `counter_sign` and `signatures_of`
-  let a verifier check several signatures by keys other than
-  `Op.actor` over one stable `content_hash`. Confidence: high (API
-  names read, behavior not run). Verification: a test in
-  `crates/identikey-log` that co-signs with two non-actor keys and
-  verifies each. Synthesis: record the result here.
+- **H1.** Claim: a group verifier can be built on `identikey-log`
+  without changing the crate. `counter_sign` attaches signatures by
+  keys other than `Op.actor` over the same `sign_digest`, `signatures_of`
+  returns them in wire order, each verifies strictly under its own key,
+  and the generic `verify` rejects the co-signed op. Confidence: high
+  (source read, behavior not run). Verification: a test in
+  `crates/identikey-log` that co-signs with two non-actor keys, checks
+  each against `sign_digest`, confirms that `entry_hash` is a different
+  value, and confirms that an elided entry is detectable. Synthesis:
+  record the result here.
 - **H2.** Claim: a `bc-xid` `XIDDocument` can be built for an XID that
   has no inception key in the document, so a group XID can be served by
   existing resolvers as a projection. Confidence: medium. Verification:

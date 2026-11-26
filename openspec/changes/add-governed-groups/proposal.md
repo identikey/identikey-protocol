@@ -64,8 +64,11 @@ Capabilities: `identikey-group` (ADDED). `identikey-keyspace`,
   key-derived guild XID with a separate binding proof. This change
   derives the XID from the founding entry instead. That is a changed
   commitment, decided by the user on 2026-11-26 (see `design.md`,
-  "Identifier"). The core amendment is a separate change in
-  identikey-core and is owed before this standard is relied on there.
+  "Identifier"). Two more living requirements there need amending:
+  "Collective control evidence" and "Handoff phases are independently
+  abortable" (see `design.md`, "Map to the core governance contract").
+  The core amendments are a separate change in identikey-core and are
+  owed before this standard is relied on there.
 
 ## User journey & surfaces
 

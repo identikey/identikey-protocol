@@ -34,8 +34,10 @@ entry SHALL name exactly one parent, the previous settled entry, SHALL
 carry the group XID, and SHALL carry a sequence one greater than its
 parent's. Two entries with the same parent SHALL NOT be merged. A
 verifier SHALL stop at the predecessor of an entry whose kind it does
-not implement. Bodies SHALL be canonical dCBOR, and an unknown body key
-SHALL fail.
+not implement. Bodies SHALL be canonical dCBOR, and an unknown key at
+any depth SHALL fail. An entry SHALL have a body, SHALL have no
+dependencies, negative acknowledgements, target fingerprint, or
+timestamp, and SHALL carry no elided, salted, or undefined assertion.
 
 #### Scenario: Sequence gap
 - GIVEN a log settled through sequence 4
@@ -46,6 +48,21 @@ SHALL fail.
 - GIVEN two approved entries that name the same parent
 - WHEN a verifier holds both and neither has a receipt
 - THEN it applies neither and reports the state at the parent
+
+#### Scenario: Second parent
+- GIVEN an entry that names two parents
+- WHEN a verifier reads it
+- THEN verification rejects it
+
+#### Scenario: Unknown body key
+- GIVEN a `group.roster` body with a key this standard does not define, inside a member map
+- WHEN a verifier reads it
+- THEN verification rejects it
+
+#### Scenario: Elided entry
+- GIVEN an entry in which one assertion has been replaced by its digest
+- WHEN a verifier reads it
+- THEN verification rejects it even though its signatures still verify
 
 #### Scenario: Unknown kind
 - GIVEN a log whose sequence 3 entry has a kind the verifier does not implement
@@ -74,6 +91,53 @@ SHALL be verifiable without resolving any member's own XID document.
 - WHEN a verifier replays the log
 - THEN it reaches the same verdict it would reach online
 
+### Requirement: Member signatures are exact
+A member signature SHALL be a strict Ed25519 signature over the 32-byte
+SHA-256 Gordian digest of the entry's wrapped unsigned envelope. It
+SHALL NOT be a signature over the entry's content hash. Every signing
+key SHALL be a valid, non-weak Ed25519 verification key. An entry SHALL
+be presented with one key per attached signature, in wire order. Each
+signature SHALL verify under its key, each key SHALL be a key of the
+roster before the entry or a key the entry adds, and no key SHALL
+appear twice. An entry that fails any of these SHALL be rejected as
+presented. The proposer named by the entry SHALL be among its signers.
+No signature algorithm other than Ed25519 SHALL be accepted in v1.
+
+#### Scenario: Signature over the content hash
+- GIVEN an entry whose only signature was made over its BLAKE3 content hash
+- WHEN a verifier checks it
+- THEN verification rejects it
+
+#### Scenario: Co-signers who are not the proposer
+- GIVEN an entry proposed by one owner and co-signed by two other owners
+- WHEN a group verifier checks each signature under its own key
+- THEN all three count as approvals
+
+#### Scenario: Unattributable signature
+- GIVEN an entry with enough owner signatures and one more signature by a key that is in no roster and is not added by the entry
+- WHEN a verifier checks it
+- THEN the entry as presented is rejected
+
+#### Scenario: Same key twice
+- GIVEN an entry that carries two signatures by one key
+- WHEN a verifier checks it
+- THEN the entry as presented is rejected
+
+#### Scenario: Proposer did not sign
+- GIVEN an entry that names an owner as proposer and carries signatures by two other owners only
+- WHEN a verifier checks it
+- THEN verification rejects it
+
+#### Scenario: Weak key
+- GIVEN an entry that adds a member key that is a small-order Ed25519 point
+- WHEN a verifier checks it
+- THEN verification rejects it
+
+#### Scenario: Post-quantum signature
+- GIVEN an entry that carries an ML-DSA signature
+- WHEN a v1 verifier checks it
+- THEN verification rejects it
+
 ### Requirement: Quorum authorization per action
 The policy SHALL name a rule of the form `k` of `role` for `roster` and
 for `policy`, and MAY name one for `delegate` and for `revoke`. `k`
@@ -82,9 +146,8 @@ holding `role` in the state before the entry, the number needed SHALL
 be `k` itself, `floor(n/2) + 1`, or `n` respectively. An entry SHALL be
 approved only when valid signatures over that entry come from keys of
 at least that many distinct members holding `role` in the state before
-the entry. The proposer SHALL be a member. A signature by a key outside
-the roster SHALL NOT count. An action with no rule SHALL be
-unavailable. The founding entry SHALL meet its own `policy` rule against
+the entry. The proposer SHALL be a member. An action with no rule SHALL
+be unavailable. The founding entry SHALL meet its own `policy` rule against
 its own roster.
 
 #### Scenario: Two of three owners
@@ -97,9 +160,9 @@ its own roster.
 - WHEN that owner signs an entry
 - THEN the entry is approved
 
-#### Scenario: Outsider signature
+#### Scenario: Member without the role
 - GIVEN a rule of 2 of `owner`
-- WHEN one owner and one key that is not in the roster sign an entry
+- WHEN one owner and one member who does not hold `owner` sign an entry
 - THEN the entry is not approved
 
 #### Scenario: Majority follows the roster
@@ -220,9 +283,11 @@ key of the policy in force before it. The receipt SHALL be a strict
 Ed25519 signature over the label `identikey/group/settle/v1`, one zero
 byte, the group XID, the sequence as an unsigned 64-bit big-endian
 integer, the entry's content hash, and the settlement time in Unix
-seconds as an unsigned 64-bit big-endian integer. A receipt's time
-SHALL NOT be earlier than the receipt time of the entry's parent. The
-time SHALL NOT enter the state digest. The founding entry SHALL be
+seconds as an unsigned 64-bit big-endian integer. Several receipts for
+one entry SHALL be one settlement record, whatever their times. Receipt
+times SHALL NOT be compared with one another, with a parent's receipt,
+or with a head. The time SHALL NOT enter the state digest. The founding
+entry SHALL be
 settled by the witness it names. An approved entry with no receipt
 SHALL be pending. Two settlement records for different entries at one
 sequence SHALL freeze the group at the predecessor, in either arrival
@@ -250,10 +315,20 @@ witness SHALL NOT be able to author an entry.
 - WHEN a verifier replays the log
 - THEN the entry is rejected and the receipt does not block a valid entry at that sequence
 
-#### Scenario: Receipt dated before its parent
-- GIVEN a settled entry whose receipt time is T
-- WHEN the next entry's receipt carries a time earlier than T
-- THEN that receipt is not a settlement record
+#### Scenario: Two receipts for one entry
+- GIVEN an entry with valid witness receipts at times 10 and 20, both before its expiry, and a child entry with a receipt at time 15
+- WHEN one verifier is given the first receipt and another is given the second
+- THEN both report the same chain and the same state
+
+#### Scenario: Receipt by the wrong key
+- GIVEN an approved entry and a receipt signed by a key that is not the witness of the policy in force before it
+- WHEN a verifier replays the log
+- THEN the entry is pending
+
+#### Scenario: Receipt for another group
+- GIVEN an approved entry and a witness receipt whose transcript names a different group XID
+- WHEN a verifier replays the log
+- THEN the entry is pending
 
 #### Scenario: Witness signs as a member
 - GIVEN a policy whose witness key also appears as a member key
@@ -287,8 +362,8 @@ only when that entry meets the `policy` rule.
 A head SHALL be a strict Ed25519 signature by the current witness over
 the label `identikey/group/head/v1`, one zero byte, the group XID, the
 sequence, the entry's content hash, a time in Unix seconds, and a
-32-byte nonce. A head's time SHALL NOT be earlier than the receipt time
-of the entry it names. A verifier SHALL retain the highest head it has accepted
+32-byte nonce. A verifier SHALL reject a head whose time is more than
+300 seconds ahead of its own clock. A verifier SHALL retain the highest head it has accepted
 for a group and SHALL refuse a log that does not extend it. A relying
 party that installs a durable binding SHALL require its own nonce in
 the head and SHALL spend that nonce on install. A log that verifies
@@ -299,6 +374,11 @@ authorize a new action.
 - GIVEN a verifier that has accepted a head at sequence 9
 - WHEN it is given a valid log and head that end at sequence 7
 - THEN it refuses that log
+
+#### Scenario: Head from the future
+- GIVEN a head whose time is one hour ahead of the verifier's clock
+- WHEN the verifier checks it
+- THEN it rejects the head
 
 #### Scenario: Wrong nonce
 - GIVEN a relying party that issued a nonce for an install
@@ -315,11 +395,11 @@ A `group.delegate` entry SHALL carry the digest of a grant and SHALL NOT
 carry the grant body. The digest SHALL be SHA-256 of the label
 `identikey/group/grant/v1`, one zero byte, and the grant's canonical
 dCBOR. A grant SHALL name the group, a holder, a scope with a kind, a
-validity window, a maximum head age, and a salt. A grant SHALL be live
-only when its delegate entry is settled, no later settled entry revokes
-it, every later settled `group.policy` entry lists it as kept, the
-current time is inside its window, and the head is no older than its
-maximum head age. Group v1 SHALL NOT define a group signing key. A
+validity window, a maximum head age of at least one second, and a
+16-byte salt. A grant SHALL be live only when its digest is standing in
+the state at the head, the presented body hashes to that digest and
+names this group, the current time is inside its window, and the head
+is no older than its maximum head age. Group v1 SHALL NOT define a group signing key. A
 member's signature SHALL NOT be a signature of the group.
 
 #### Scenario: Live grant
@@ -331,6 +411,21 @@ member's signature SHALL NOT be a signature of the group.
 - GIVEN a grant body whose scope was altered after issue
 - WHEN a relying party computes its digest
 - THEN no settled entry carries that digest and the grant is refused
+
+#### Scenario: Grant for another group
+- GIVEN a grant body that names a different group and whose digest is standing in this group
+- WHEN a relying party checks it
+- THEN the grant is refused
+
+#### Scenario: Outside the window
+- GIVEN a standing grant whose window ended yesterday
+- WHEN a relying party checks it against a fresh head
+- THEN the grant is refused
+
+#### Scenario: Head too old
+- GIVEN a standing grant with a maximum head age of 60 seconds
+- WHEN a relying party holds a head that is 120 seconds old
+- THEN the grant is refused
 
 #### Scenario: Revoked
 - GIVEN a grant and a later settled `group.revoke` entry that names its digest
@@ -352,11 +447,70 @@ member's signature SHALL NOT be a signature of the group.
 - WHEN a relying party is asked to accept it as the group's signature
 - THEN it refuses
 
+### Requirement: Replay is a total function of the entries
+Replay SHALL depend on the entries alone and SHALL NOT read a clock or
+a grant body. The state SHALL be the sequence, the roster, the policy,
+and the standing grant digests. Every array in a body and in the state
+SHALL be sorted ascending without duplicates, an optional array SHALL
+be omitted when empty, and a present empty array SHALL fail. A
+`group.roster` entry SHALL remove the members it drops and SHALL
+replace or add the members it sets. A `group.policy` entry SHALL
+replace the policy and SHALL leave standing exactly the digests it
+keeps, each of which SHALL have been standing before it. A
+`group.delegate` entry SHALL add a digest that is not standing. A
+`group.revoke` entry SHALL remove a digest that is standing. An entry
+that leaves the state unchanged apart from the sequence SHALL fail. A
+bundle SHALL carry the whole chain from sequence 0 with no gap.
+
+#### Scenario: Same log, different clocks
+- GIVEN one bundle with a standing grant whose body is not available
+- WHEN two verifiers replay it a year apart
+- THEN both compute the same state digests at every sequence
+
+#### Scenario: Member in both set and drop
+- GIVEN a `group.roster` entry that names one XID in `set` and in `drop`
+- WHEN a verifier applies it
+- THEN verification rejects it
+
+#### Scenario: Drop of an unknown member
+- GIVEN a `group.roster` entry whose `drop` names an XID that is not in the roster
+- WHEN a verifier applies it
+- THEN verification rejects it
+
+#### Scenario: Unsorted roster
+- GIVEN an entry whose `set` lists two members out of XID order
+- WHEN a verifier applies it
+- THEN verification rejects it
+
+#### Scenario: Keep cannot restore a grant
+- GIVEN a grant that an earlier `group.policy` entry voided
+- WHEN a later `group.policy` entry lists its digest in `keep`
+- THEN verification rejects that entry
+
+#### Scenario: Revoke of a grant that is not standing
+- GIVEN a digest that was never delegated
+- WHEN a `group.revoke` entry names it
+- THEN verification rejects it
+
+#### Scenario: Delegated twice
+- GIVEN a standing grant
+- WHEN a `group.delegate` entry carries the same digest
+- THEN verification rejects it
+
+#### Scenario: Issued again after revocation
+- GIVEN a grant that was delegated and then revoked
+- WHEN a new `group.delegate` entry that meets the `delegate` rule carries the same digest
+- THEN the grant is standing again
+
+#### Scenario: Bundle with a gap
+- GIVEN a bundle whose entries run 0, 1, 3
+- WHEN a verifier reads it
+- THEN it rejects the bundle
+
 ### Requirement: Every entry commits to its resulting state
 Every entry SHALL carry the SHA-256 digest of the canonical dCBOR of
-the state after the entry is applied: sequence, roster, policy, and
-live grant digests. A verifier SHALL reject an entry when its own
-replay gives a different digest.
+the state after the entry is applied. A verifier SHALL reject an entry
+when its own replay gives a different digest.
 
 #### Scenario: Replay disagrees
 - GIVEN an entry whose state digest does not match the verifier's replay
@@ -367,7 +521,8 @@ replay gives a different digest.
 A policy SHALL declare its authorization, settlement, and secret-release
 mechanisms. Group v1 SHALL accept `quorum-v1`, `witness-v1`, and `none`
 respectively, and `visibility` `public`. Any other value SHALL be
-rejected. A roster SHALL hold at most 256 members. An entry SHALL carry
+rejected. A roster SHALL hold at most 256 members, and a member SHALL
+hold at most 8 keys. An entry SHALL carry
 at most 64 signatures and SHALL be at most 65,536 bytes signed. Evidence
 over a limit SHALL be rejected and SHALL NOT be truncated. No failure
 SHALL fall back to a single administrator.
