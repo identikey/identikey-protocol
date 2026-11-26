@@ -34,8 +34,9 @@ entry SHALL name exactly one parent, the previous settled entry, SHALL
 carry the group XID, and SHALL carry a sequence one greater than its
 parent's. Two entries with the same parent SHALL NOT be merged. A
 verifier SHALL stop at the predecessor of an entry whose kind, or whose
-policy mechanism value, it does not implement, and SHALL NOT authorize
-a new action for that group on the earlier state. Bodies SHALL be canonical dCBOR, and an unknown key at
+policy mechanism value, it does not implement, SHALL NOT authorize a
+new action for that group on the earlier state, and SHALL store that
+finding and keep to it whatever shorter log it is given later. Bodies SHALL be canonical dCBOR, and an unknown key at
 any depth SHALL fail. An entry SHALL have a body, SHALL have no
 dependencies, negative acknowledgements, target fingerprint, or
 timestamp, and SHALL carry no elided, salted, or undefined assertion.
@@ -70,6 +71,7 @@ timestamp, and SHALL carry no elided, salted, or undefined assertion.
 - WHEN the verifier replays the log
 - THEN it reports the state at sequence 2 and does not skip ahead
 - AND it authorizes no new action for that group
+- AND it still authorizes none when later given only the entries through sequence 2 with a fresh head
 
 ### Requirement: Roster principals are member XIDs
 A roster entry SHALL name a member XID, one or more 32-byte Ed25519
@@ -539,9 +541,16 @@ member's signature SHALL NOT be a signature of the group.
 
 ### Requirement: A grant is delegation under bounded staleness
 The holder of a grant SHALL act in its own name. A relying party that
-honors a live grant SHALL treat a revocation or policy change settled
-within the grant's maximum head age plus the 60-second clock tolerance
-as possibly not yet visible. A live
+honors a live grant SHALL treat a recent revocation or policy change as
+possibly not yet visible. The freshness test SHALL be on computed age:
+a head whose age by the verifier's clock is greater than the grant's
+maximum head age SHALL fail, and the 60-second tolerance SHALL NOT be
+added to that test. The standard SHALL state that a revocation or
+policy change settled more than the maximum head age plus 60 seconds
+ago is visible only when the witness is honest about what is current,
+the witness's clock is right, and the verifier's clock is within 60
+seconds of real time, and that checking a head's time does not
+establish the last of these. A live
 grant and a head SHALL NOT by themselves authorize an action whose
 effect outlasts the check, including a durable binding and a secret
 release. Group v1 SHALL NOT define a consume record.
@@ -551,6 +560,23 @@ release. Group v1 SHALL NOT define a consume record.
 - WHEN a revocation of that grant settles and the relying party checks the grant against the head it holds
 - THEN the grant is live for that check
 - AND it is refused once the relying party holds a head that includes the revocation
+
+#### Scenario: Computed age at the limit
+- GIVEN a standing grant with a maximum head age of 60 seconds
+- WHEN a relying party holds a head whose computed age is exactly 60 seconds
+- THEN the grant is live
+- AND with a computed age of 61 seconds it is refused
+
+#### Scenario: Verifier clock within tolerance
+- GIVEN an honest witness with a correct clock, a head signed at time 1000 showing a grant with a maximum head age of 60 seconds, and a revocation settled at time 1001
+- WHEN a verifier whose clock is within 60 seconds of real time checks the grant against that head
+- THEN the check can pass only while real time is at most 1120
+
+#### Scenario: Verifier clock runs slow
+- GIVEN the same head and revocation, and a verifier meeting the group for the first time whose clock reads 1050 when real time is 10000
+- WHEN it checks the grant against that head
+- THEN the computed age is 50 seconds and the check passes
+- AND this standard gives that verifier no bound in real time
 
 #### Scenario: Policy change inside the bound
 - GIVEN a grant with a maximum head age of 60 seconds, and a relying party holding a head 30 seconds old

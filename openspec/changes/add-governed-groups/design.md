@@ -105,7 +105,8 @@ or because its policy names a mechanism value the verifier does not
 know, stops at the predecessor. It reports the group as unsupported
 from that sequence and authorizes no new action on the earlier state. A
 later entry exists that it cannot read, so the earlier state is not
-known to be current.
+known to be current. It stores this for the group and keeps reporting
+it, whatever shorter bundle it is given later.
 
 ### Entry envelope
 
@@ -663,9 +664,11 @@ What v1 does so that the later change is an upgrade and not a break:
   does not know.
 - A group adopts an anchor with a `group.policy` entry that changes
   `mech.anchor`. A v1 verifier that reads that entry stops there and
-  authorizes nothing further. A verifier that has read it, and keeps
-  its highest head, does not later check that group at the weaker
-  level.
+  authorizes nothing further. It stores that fact for the group (the
+  XID and the sequence it could not read) as durably as its highest
+  head, because the head it accepted before the adoption does not
+  record it. A verifier that has stored it does not later check that
+  group at the weaker level.
 - That protection reaches only verifiers that have seen the adoption
   entry. A v1 verifier on first contact, shown only the prefix before
   adoption with a fresh head from the witness named there, accepts it.
@@ -708,15 +711,42 @@ act inside `head_age`. A nonce does not close that gap.
 So v1 grants are delegation under bounded staleness, and nothing more:
 
 - The holder of a grant acts in its own name, with its own key. A
-  relying party that honors the grant accepts that a revocation or a
-  policy change settled within the bound may not be visible to it. The
-  bound is `head_age` seconds plus the 60 seconds of clock tolerance,
-  and it assumes the witness's clock is right. The group chose
-  `head_age` when it issued the grant.
+  relying party that honors the grant accepts that a recent revocation
+  or policy change may not be visible to it. The group chose `head_age`
+  when it issued the grant.
 - A bundle that predates a revocation or a policy change still
   verifies. A verifier refuses it when it has accepted a later head, or
-  when its head is older than the bound. Otherwise the verifier cannot
-  know, and that is the staleness the grant declares.
+  when the head's computed age is greater than `head_age`. Otherwise
+  the verifier cannot know, and that is the staleness the grant
+  declares.
+
+### The clock assumption
+
+The test a verifier applies is on computed age: the head's age, by the
+verifier's own clock, is not greater than `head_age`. That test does
+not by itself bound real time.
+
+The bound in real time is `head_age` plus 60 seconds: a revocation or
+policy change that settled longer ago than that is visible to the
+relying party. It holds only when all three of these hold at the
+moment of the check:
+
+- the witness is honest about what is current,
+- the witness's clock is right, and
+- the verifier's clock is within 60 seconds of real time.
+
+The 60 seconds is an allowance for clock error in the real-time bound.
+It is not added to the computed-age test. A head with a computed age
+of 61 seconds fails a `head_age` of 60.
+
+Checking a head's time does not establish the third condition. The
+check against a future time only shows that one signed time is not
+ahead of the verifier. A verifier whose clock runs an hour slow reads
+an hour-old head as fresh. A stale signed head cannot tell a verifier
+that its own clock is wrong. Without a synchronized verifier clock, v1
+gives no finite bound in real time. A relying party keeps its clock
+synchronized by its own means. This standard defines no protocol for
+it.
 - This standard gives no authority for an action whose effect outlasts
   the check: installing a durable binding, releasing a secret, or
   anything else that the core contract requires to be consumed once and

@@ -16,8 +16,10 @@ for all nine, with the user's decisions on R1, R2, R3, and R6 recorded
 in `steer.md`. A second advise sent it back again on five
 statements that claimed more than the design gives
 (`reviews/2026-11-26-advise-2.md`, S1 to S5). The contract was revised
-for all five without a change of design. A fresh advise by the same
-reader is owed. Authority: the user asked for
+for all five without a change of design. A third advise resolved four
+of them and sent back one (`reviews/2026-11-26-advise-3.md`, T1: the
+verifier-clock assumption behind the staleness bound). That is now
+stated. A fresh advise by the same reader is owed. Authority: the user asked for
 change, then architecture review. No activation was given.
 
 ## Why
