@@ -1,0 +1,635 @@
+{
+  "profile": "forgejo-ci-owner-v1",
+  "cases": [
+    {
+      "name": "settled-quorum",
+      "valid": true,
+      "context": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+        "threshold": 2,
+        "witness_key": "b6552ddb53b549e0e3d5d8e6911cdf68fdcefefc858b07e7e2534bc871a8df35",
+        "owners": [
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f"
+          },
+          {
+            "principal": "c00551ba682fe276d6d6e06e2316f1cb19ed339f73069b5824e022994d7144cc",
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a"
+          },
+          {
+            "principal": "dc070e01ae1620019bc805a82b4c06a45ff8bb685d577f3d811251f8ec790d7d",
+            "public_key": "ef015e9bd9af1bfb434bc4e7ac6a8af1db59b1832bf8ada748ee4cad754dd28c"
+          },
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "678d8770165f9a08f852a274a04d117b4589ebb18119b18d01b45251c74e3d89"
+          }
+        ]
+      },
+      "proof": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "approvals": [
+          {
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f",
+            "signature": "e23c642678132dd66de4f9527b959c352149d6b4eb65a58c5ee7eb0bf62c8592972149bd51ddb105e1b0d051bdd0b5a1707e7041b0df85eabbfc5f103b17090c"
+          },
+          {
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a",
+            "signature": "f556775067016d4b5fccc594f6222022d36838b21b114d366eb5dcdb368dab451bb9310aae80ecaf6aabfbf9adfd4ede83144596caa5780b4a80f3bb60c6d50d"
+          }
+        ],
+        "settlement": {
+          "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+          "signature": "fd6288d54820e28425c1450726635f17e661eccd50b5dde9fcfd11ff4c9452378ae97b5df26052e9df39a828398ae95257fd197967dc69234f805c047d56f40b"
+        }
+      },
+      "approval_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005",
+      "consume_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f636f6e73756d652f7631006964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce"
+    },
+    {
+      "name": "settled-single-owner",
+      "valid": true,
+      "context": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "c37175d612717bdd8c26e5e28506034543f79c91a458b7c545f4f4ee9614ed38",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+        "threshold": 1,
+        "witness_key": "b6552ddb53b549e0e3d5d8e6911cdf68fdcefefc858b07e7e2534bc871a8df35",
+        "owners": [
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f"
+          }
+        ]
+      },
+      "proof": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "c37175d612717bdd8c26e5e28506034543f79c91a458b7c545f4f4ee9614ed38",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "approvals": [
+          {
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f",
+            "signature": "6319ae83d75f8268a11852e20288e493a78634b89e7a6f741a34a7e51ea75f0fc09540c20261c662357e4a13bb22791145e421a50f7676758ba25f087d9c470c"
+          }
+        ],
+        "settlement": {
+          "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+          "signature": "ea6e89638e553d70a2d7a9e94bd702fecd9e2c60e559502cd59e8b527469aea979a5e03ea877b75ff768f2043446b590d2d4a40722970cf64e99acef1cc7b90a"
+        }
+      },
+      "approval_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bc37175d612717bdd8c26e5e28506034543f79c91a458b7c545f4f4ee9614ed38000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005",
+      "consume_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f636f6e73756d652f7631006964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bc37175d612717bdd8c26e5e28506034543f79c91a458b7c545f4f4ee9614ed38000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce"
+    },
+    {
+      "name": "other-expected-organization",
+      "valid": false,
+      "context": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 6,
+        "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+        "threshold": 2,
+        "witness_key": "b6552ddb53b549e0e3d5d8e6911cdf68fdcefefc858b07e7e2534bc871a8df35",
+        "owners": [
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f"
+          },
+          {
+            "principal": "c00551ba682fe276d6d6e06e2316f1cb19ed339f73069b5824e022994d7144cc",
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a"
+          },
+          {
+            "principal": "dc070e01ae1620019bc805a82b4c06a45ff8bb685d577f3d811251f8ec790d7d",
+            "public_key": "ef015e9bd9af1bfb434bc4e7ac6a8af1db59b1832bf8ada748ee4cad754dd28c"
+          },
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "678d8770165f9a08f852a274a04d117b4589ebb18119b18d01b45251c74e3d89"
+          }
+        ]
+      },
+      "proof": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "approvals": [
+          {
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f",
+            "signature": "e23c642678132dd66de4f9527b959c352149d6b4eb65a58c5ee7eb0bf62c8592972149bd51ddb105e1b0d051bdd0b5a1707e7041b0df85eabbfc5f103b17090c"
+          },
+          {
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a",
+            "signature": "f556775067016d4b5fccc594f6222022d36838b21b114d366eb5dcdb368dab451bb9310aae80ecaf6aabfbf9adfd4ede83144596caa5780b4a80f3bb60c6d50d"
+          }
+        ],
+        "settlement": {
+          "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+          "signature": "fd6288d54820e28425c1450726635f17e661eccd50b5dde9fcfd11ff4c9452378ae97b5df26052e9df39a828398ae95257fd197967dc69234f805c047d56f40b"
+        }
+      },
+      "approval_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005",
+      "consume_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f636f6e73756d652f7631006964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce"
+    },
+    {
+      "name": "duplicate-key",
+      "valid": false,
+      "context": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+        "threshold": 2,
+        "witness_key": "b6552ddb53b549e0e3d5d8e6911cdf68fdcefefc858b07e7e2534bc871a8df35",
+        "owners": [
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f"
+          },
+          {
+            "principal": "c00551ba682fe276d6d6e06e2316f1cb19ed339f73069b5824e022994d7144cc",
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a"
+          },
+          {
+            "principal": "dc070e01ae1620019bc805a82b4c06a45ff8bb685d577f3d811251f8ec790d7d",
+            "public_key": "ef015e9bd9af1bfb434bc4e7ac6a8af1db59b1832bf8ada748ee4cad754dd28c"
+          },
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "678d8770165f9a08f852a274a04d117b4589ebb18119b18d01b45251c74e3d89"
+          }
+        ]
+      },
+      "proof": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "approvals": [
+          {
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f",
+            "signature": "e23c642678132dd66de4f9527b959c352149d6b4eb65a58c5ee7eb0bf62c8592972149bd51ddb105e1b0d051bdd0b5a1707e7041b0df85eabbfc5f103b17090c"
+          },
+          {
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f",
+            "signature": "e23c642678132dd66de4f9527b959c352149d6b4eb65a58c5ee7eb0bf62c8592972149bd51ddb105e1b0d051bdd0b5a1707e7041b0df85eabbfc5f103b17090c"
+          }
+        ],
+        "settlement": {
+          "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+          "signature": "fd6288d54820e28425c1450726635f17e661eccd50b5dde9fcfd11ff4c9452378ae97b5df26052e9df39a828398ae95257fd197967dc69234f805c047d56f40b"
+        }
+      },
+      "approval_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005",
+      "consume_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f636f6e73756d652f7631006964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce"
+    },
+    {
+      "name": "two-devices-one-principal",
+      "valid": false,
+      "context": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+        "threshold": 2,
+        "witness_key": "b6552ddb53b549e0e3d5d8e6911cdf68fdcefefc858b07e7e2534bc871a8df35",
+        "owners": [
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f"
+          },
+          {
+            "principal": "c00551ba682fe276d6d6e06e2316f1cb19ed339f73069b5824e022994d7144cc",
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a"
+          },
+          {
+            "principal": "dc070e01ae1620019bc805a82b4c06a45ff8bb685d577f3d811251f8ec790d7d",
+            "public_key": "ef015e9bd9af1bfb434bc4e7ac6a8af1db59b1832bf8ada748ee4cad754dd28c"
+          },
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "678d8770165f9a08f852a274a04d117b4589ebb18119b18d01b45251c74e3d89"
+          }
+        ]
+      },
+      "proof": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "approvals": [
+          {
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f",
+            "signature": "e23c642678132dd66de4f9527b959c352149d6b4eb65a58c5ee7eb0bf62c8592972149bd51ddb105e1b0d051bdd0b5a1707e7041b0df85eabbfc5f103b17090c"
+          },
+          {
+            "public_key": "678d8770165f9a08f852a274a04d117b4589ebb18119b18d01b45251c74e3d89",
+            "signature": "d99c61cda9ad81e3a60ea6b34acca7aa5e4a2449c17a1aeaa7d6f03732fa218262e88cdc429d6396053cdd52ae736e481ae39fc107c93153a57ffa1bd68b3406"
+          }
+        ],
+        "settlement": {
+          "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+          "signature": "fd6288d54820e28425c1450726635f17e661eccd50b5dde9fcfd11ff4c9452378ae97b5df26052e9df39a828398ae95257fd197967dc69234f805c047d56f40b"
+        }
+      },
+      "approval_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005",
+      "consume_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f636f6e73756d652f7631006964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce"
+    },
+    {
+      "name": "substituted-org_id",
+      "valid": false,
+      "context": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 6,
+        "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+        "threshold": 2,
+        "witness_key": "b6552ddb53b549e0e3d5d8e6911cdf68fdcefefc858b07e7e2534bc871a8df35",
+        "owners": [
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f"
+          },
+          {
+            "principal": "c00551ba682fe276d6d6e06e2316f1cb19ed339f73069b5824e022994d7144cc",
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a"
+          },
+          {
+            "principal": "dc070e01ae1620019bc805a82b4c06a45ff8bb685d577f3d811251f8ec790d7d",
+            "public_key": "ef015e9bd9af1bfb434bc4e7ac6a8af1db59b1832bf8ada748ee4cad754dd28c"
+          },
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "678d8770165f9a08f852a274a04d117b4589ebb18119b18d01b45251c74e3d89"
+          }
+        ]
+      },
+      "proof": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 6,
+        "approvals": [
+          {
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f",
+            "signature": "e23c642678132dd66de4f9527b959c352149d6b4eb65a58c5ee7eb0bf62c8592972149bd51ddb105e1b0d051bdd0b5a1707e7041b0df85eabbfc5f103b17090c"
+          },
+          {
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a",
+            "signature": "f556775067016d4b5fccc594f6222022d36838b21b114d366eb5dcdb368dab451bb9310aae80ecaf6aabfbf9adfd4ede83144596caa5780b4a80f3bb60c6d50d"
+          }
+        ],
+        "settlement": {
+          "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+          "signature": "fd6288d54820e28425c1450726635f17e661eccd50b5dde9fcfd11ff4c9452378ae97b5df26052e9df39a828398ae95257fd197967dc69234f805c047d56f40b"
+        }
+      },
+      "approval_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000006",
+      "consume_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f636f6e73756d652f7631006964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000006f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce"
+    },
+    {
+      "name": "substituted-instance",
+      "valid": false,
+      "context": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "other.worldtree.network",
+        "org_id": 5,
+        "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+        "threshold": 2,
+        "witness_key": "b6552ddb53b549e0e3d5d8e6911cdf68fdcefefc858b07e7e2534bc871a8df35",
+        "owners": [
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f"
+          },
+          {
+            "principal": "c00551ba682fe276d6d6e06e2316f1cb19ed339f73069b5824e022994d7144cc",
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a"
+          },
+          {
+            "principal": "dc070e01ae1620019bc805a82b4c06a45ff8bb685d577f3d811251f8ec790d7d",
+            "public_key": "ef015e9bd9af1bfb434bc4e7ac6a8af1db59b1832bf8ada748ee4cad754dd28c"
+          },
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "678d8770165f9a08f852a274a04d117b4589ebb18119b18d01b45251c74e3d89"
+          }
+        ]
+      },
+      "proof": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "other.worldtree.network",
+        "org_id": 5,
+        "approvals": [
+          {
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f",
+            "signature": "e23c642678132dd66de4f9527b959c352149d6b4eb65a58c5ee7eb0bf62c8592972149bd51ddb105e1b0d051bdd0b5a1707e7041b0df85eabbfc5f103b17090c"
+          },
+          {
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a",
+            "signature": "f556775067016d4b5fccc594f6222022d36838b21b114d366eb5dcdb368dab451bb9310aae80ecaf6aabfbf9adfd4ede83144596caa5780b4a80f3bb60c6d50d"
+          }
+        ],
+        "settlement": {
+          "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+          "signature": "fd6288d54820e28425c1450726635f17e661eccd50b5dde9fcfd11ff4c9452378ae97b5df26052e9df39a828398ae95257fd197967dc69234f805c047d56f40b"
+        }
+      },
+      "approval_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176f746865722e776f726c64747265652e6e6574776f726b0000000000000005",
+      "consume_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f636f6e73756d652f7631006964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176f746865722e776f726c64747265652e6e6574776f726b0000000000000005f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce"
+    },
+    {
+      "name": "superseded-policy",
+      "valid": false,
+      "context": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "2e7f765a2ba9469c98a522cfc5dfe16998ee39d49092004b67f4bc3c58197c00",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+        "threshold": 2,
+        "witness_key": "b6552ddb53b549e0e3d5d8e6911cdf68fdcefefc858b07e7e2534bc871a8df35",
+        "owners": [
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f"
+          },
+          {
+            "principal": "c00551ba682fe276d6d6e06e2316f1cb19ed339f73069b5824e022994d7144cc",
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a"
+          },
+          {
+            "principal": "dc070e01ae1620019bc805a82b4c06a45ff8bb685d577f3d811251f8ec790d7d",
+            "public_key": "ef015e9bd9af1bfb434bc4e7ac6a8af1db59b1832bf8ada748ee4cad754dd28c"
+          },
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "678d8770165f9a08f852a274a04d117b4589ebb18119b18d01b45251c74e3d89"
+          }
+        ]
+      },
+      "proof": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "approvals": [
+          {
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f",
+            "signature": "e23c642678132dd66de4f9527b959c352149d6b4eb65a58c5ee7eb0bf62c8592972149bd51ddb105e1b0d051bdd0b5a1707e7041b0df85eabbfc5f103b17090c"
+          },
+          {
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a",
+            "signature": "f556775067016d4b5fccc594f6222022d36838b21b114d366eb5dcdb368dab451bb9310aae80ecaf6aabfbf9adfd4ede83144596caa5780b4a80f3bb60c6d50d"
+          }
+        ],
+        "settlement": {
+          "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+          "signature": "fd6288d54820e28425c1450726635f17e661eccd50b5dde9fcfd11ff4c9452378ae97b5df26052e9df39a828398ae95257fd197967dc69234f805c047d56f40b"
+        }
+      },
+      "approval_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005",
+      "consume_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f636f6e73756d652f7631006964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce"
+    },
+    {
+      "name": "unsettled-quorum",
+      "valid": false,
+      "context": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+        "threshold": 2,
+        "witness_key": "b6552ddb53b549e0e3d5d8e6911cdf68fdcefefc858b07e7e2534bc871a8df35",
+        "owners": [
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f"
+          },
+          {
+            "principal": "c00551ba682fe276d6d6e06e2316f1cb19ed339f73069b5824e022994d7144cc",
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a"
+          },
+          {
+            "principal": "dc070e01ae1620019bc805a82b4c06a45ff8bb685d577f3d811251f8ec790d7d",
+            "public_key": "ef015e9bd9af1bfb434bc4e7ac6a8af1db59b1832bf8ada748ee4cad754dd28c"
+          },
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "678d8770165f9a08f852a274a04d117b4589ebb18119b18d01b45251c74e3d89"
+          }
+        ]
+      },
+      "proof": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "approvals": [
+          {
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f",
+            "signature": "e23c642678132dd66de4f9527b959c352149d6b4eb65a58c5ee7eb0bf62c8592972149bd51ddb105e1b0d051bdd0b5a1707e7041b0df85eabbfc5f103b17090c"
+          },
+          {
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a",
+            "signature": "f556775067016d4b5fccc594f6222022d36838b21b114d366eb5dcdb368dab451bb9310aae80ecaf6aabfbf9adfd4ede83144596caa5780b4a80f3bb60c6d50d"
+          }
+        ],
+        "settlement": null
+      },
+      "approval_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005",
+      "consume_bytes": null
+    },
+    {
+      "name": "stale-challenge",
+      "valid": false,
+      "context": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "challenge": "4fcde758c7a470d86ac680110f8999e1cbfd88ca36527335b777cc2d69301135",
+        "threshold": 2,
+        "witness_key": "b6552ddb53b549e0e3d5d8e6911cdf68fdcefefc858b07e7e2534bc871a8df35",
+        "owners": [
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f"
+          },
+          {
+            "principal": "c00551ba682fe276d6d6e06e2316f1cb19ed339f73069b5824e022994d7144cc",
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a"
+          },
+          {
+            "principal": "dc070e01ae1620019bc805a82b4c06a45ff8bb685d577f3d811251f8ec790d7d",
+            "public_key": "ef015e9bd9af1bfb434bc4e7ac6a8af1db59b1832bf8ada748ee4cad754dd28c"
+          },
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "678d8770165f9a08f852a274a04d117b4589ebb18119b18d01b45251c74e3d89"
+          }
+        ]
+      },
+      "proof": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "approvals": [
+          {
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f",
+            "signature": "e23c642678132dd66de4f9527b959c352149d6b4eb65a58c5ee7eb0bf62c8592972149bd51ddb105e1b0d051bdd0b5a1707e7041b0df85eabbfc5f103b17090c"
+          },
+          {
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a",
+            "signature": "f556775067016d4b5fccc594f6222022d36838b21b114d366eb5dcdb368dab451bb9310aae80ecaf6aabfbf9adfd4ede83144596caa5780b4a80f3bb60c6d50d"
+          }
+        ],
+        "settlement": {
+          "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+          "signature": "fd6288d54820e28425c1450726635f17e661eccd50b5dde9fcfd11ff4c9452378ae97b5df26052e9df39a828398ae95257fd197967dc69234f805c047d56f40b"
+        }
+      },
+      "approval_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005",
+      "consume_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f636f6e73756d652f7631006964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce"
+    },
+    {
+      "name": "wrong-witness",
+      "valid": false,
+      "context": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+        "threshold": 2,
+        "witness_key": "23602ab6cd336188bf59f25a495fc248cf668bd43d9f784dbb0e16549e5931e2",
+        "owners": [
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f"
+          },
+          {
+            "principal": "c00551ba682fe276d6d6e06e2316f1cb19ed339f73069b5824e022994d7144cc",
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a"
+          },
+          {
+            "principal": "dc070e01ae1620019bc805a82b4c06a45ff8bb685d577f3d811251f8ec790d7d",
+            "public_key": "ef015e9bd9af1bfb434bc4e7ac6a8af1db59b1832bf8ada748ee4cad754dd28c"
+          },
+          {
+            "principal": "6a3964dd458799e2a2ad5baee695ceeb2ebd95c49156b9874fa52a353d9c5dc6",
+            "public_key": "678d8770165f9a08f852a274a04d117b4589ebb18119b18d01b45251c74e3d89"
+          }
+        ]
+      },
+      "proof": {
+        "keyspace_id": "6c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f69",
+        "guild_xid": "4984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f53995",
+        "predecessor": "7005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9b",
+        "policy_digest": "f8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3",
+        "seq": 6,
+        "instance": "mimir.worldtree.network",
+        "org_id": 5,
+        "approvals": [
+          {
+            "public_key": "8c32aac1ff3b5d8394d9420409f0be6fc4358837a68b6beff8c6edb075f2872f",
+            "signature": "e23c642678132dd66de4f9527b959c352149d6b4eb65a58c5ee7eb0bf62c8592972149bd51ddb105e1b0d051bdd0b5a1707e7041b0df85eabbfc5f103b17090c"
+          },
+          {
+            "public_key": "14f9590aec58e73def27f0da543b952d4bb09fa4e0f1ff609d97fd14fb33311a",
+            "signature": "f556775067016d4b5fccc594f6222022d36838b21b114d366eb5dcdb368dab451bb9310aae80ecaf6aabfbf9adfd4ede83144596caa5780b4a80f3bb60c6d50d"
+          }
+        ],
+        "settlement": {
+          "challenge": "f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce",
+          "signature": "fd6288d54820e28425c1450726635f17e661eccd50b5dde9fcfd11ff4c9452378ae97b5df26052e9df39a828398ae95257fd197967dc69234f805c047d56f40b"
+        }
+      },
+      "approval_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005",
+      "consume_bytes": "6964656e74696b65792f666f7267656a6f2d63692d6f776e65722f636f6e73756d652f7631006964656e74696b65792f666f7267656a6f2d63692d6f776e65722f617070726f76616c2f7631006c717e48a178b585fe4ec578b3d5b8e95e2853ac42cd021bf147966dd2588f694984f81738265880f92769f5ab4c81fa3ced2698aa14ac2e71f1e9c320f539957005537965ccb91a8fcf8345bc43e8c7dc566a72c8bae7a8ddbc73dc372f5b9bf8c217b86e6bd90365e10f0ae7bd3c7eef89471357e7db58a4eed6b55813a5f3000000000000000600176d696d69722e776f726c64747265652e6e6574776f726b0000000000000005f83f806740a8e171abd5cb1da2dccd79a130689d371b482f44c7871f9d9a89ce"
+    }
+  ]
+}
