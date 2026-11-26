@@ -79,6 +79,11 @@ def vectors():
     add("other-expected-organization", expected=dict(context, org_id=6))
     add("duplicate-key", proof=dict(good, approvals=[approval(alice), approval(alice)]))
     add("two-devices-one-principal", proof=dict(good, approvals=[approval(alice), approval(alice_device)]))
+    add("below-quorum", proof=dict(good, approvals=[approval(alice)]))
+    add("duplicate-principal-with-quorum",
+        proof=dict(good, approvals=[*good["approvals"], approval(alice_device)]))
+    wrong_signature = dict(approval(bob), signature=approval(charlie)["signature"])
+    add("invalid-owner-signature", proof=dict(good, approvals=[approval(alice), wrong_signature]))
     for field, replacement in (("org_id", 6), ("instance", "other.worldtree.network")):
         add("substituted-" + field, proof=dict(good, **{field: replacement}),
             expected=dict(context, **{field: replacement}))
