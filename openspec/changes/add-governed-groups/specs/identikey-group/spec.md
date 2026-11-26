@@ -33,8 +33,9 @@ The founding entry SHALL have sequence 0 and no parent. Every other
 entry SHALL name exactly one parent, the previous settled entry, SHALL
 carry the group XID, and SHALL carry a sequence one greater than its
 parent's. Two entries with the same parent SHALL NOT be merged. A
-verifier SHALL stop at the predecessor of an entry whose kind it does
-not implement. Bodies SHALL be canonical dCBOR, and an unknown key at
+verifier SHALL stop at the predecessor of an entry whose kind, or whose
+policy mechanism value, it does not implement, and SHALL NOT authorize
+a new action for that group on the earlier state. Bodies SHALL be canonical dCBOR, and an unknown key at
 any depth SHALL fail. An entry SHALL have a body, SHALL have no
 dependencies, negative acknowledgements, target fingerprint, or
 timestamp, and SHALL carry no elided, salted, or undefined assertion.
@@ -68,6 +69,7 @@ timestamp, and SHALL carry no elided, salted, or undefined assertion.
 - GIVEN a log whose sequence 3 entry has a kind the verifier does not implement
 - WHEN the verifier replays the log
 - THEN it reports the state at sequence 2 and does not skip ahead
+- AND it authorizes no new action for that group
 
 ### Requirement: Roster principals are member XIDs
 A roster entry SHALL name a member XID, one or more 32-byte Ed25519
@@ -186,13 +188,36 @@ its own roster.
 - WHEN a `group.delegate` entry is signed by every member
 - THEN verification rejects it
 
+### Requirement: The policy rule is the root
+A `group.policy` entry that meets the `policy` rule SHALL be able to
+replace every other rule, the witness, and the exit key. A threshold on
+another action SHALL NOT bind the members who can pass the `policy`
+rule. No sequence of valid entries SHALL give the power to pass the
+`policy` rule to a set of members who could not pass it before.
+
+#### Scenario: Policy rewrites a stricter rule
+- GIVEN rules `policy` 1 of `admin`, `roster` 1 of `admin`, and `delegate` 2 of `owner`
+- WHEN one admin signs a `group.policy` entry that sets `delegate` to 1 of `admin`, and then signs a `group.delegate` entry alone
+- THEN both entries are approved
+
+#### Scenario: Rule removed and restored around a roster change
+- GIVEN the same rules
+- WHEN one admin removes the `delegate` rule by a `group.policy` entry, gives itself the `owner` role by a `group.roster` entry, and restores the rule by a second `group.policy` entry
+- THEN all three entries are approved
+
+#### Scenario: The root cannot be reached from below
+- GIVEN rules `roster` 1 of `admin` and `policy` 2 of `owner`, and an admin who is not an owner
+- WHEN that admin alone signs any `group.roster` entry that adds an owner, drops an owner, or changes an owner's keys
+- THEN verification rejects it
+
 ### Requirement: Role and key changes need the rules they affect
 A `group.roster` entry that changes which members hold a role, or that
 changes the keys of a member who holds a role, SHALL satisfy, in
 addition to the `roster` rule, every rule that names that role. An
 entry SHALL be rejected when, in the resulting state, the role of any
 rule has no holder, or a numeric `k` is zero or greater than the number
-of distinct members holding its role. A rule that too few holders
+of distinct members holding its role, or the rule needs more than 48
+members. A rule that too few holders
 remain to meet SHALL stay unmet. No entry and no mechanism SHALL lower
 it for them.
 
@@ -216,6 +241,16 @@ it for them.
 - WHEN the other two owners and the replacement key sign an entry that sets that owner's keys to the replacement
 - THEN the entry is approved
 
+#### Scenario: All of forty-nine
+- GIVEN 49 members who hold a role
+- WHEN a `group.policy` entry that is otherwise approved sets a rule to `all` of that role
+- THEN verification rejects it
+
+#### Scenario: Majority crosses the limit
+- GIVEN a rule of `majority` of a role held by 95 members
+- WHEN an otherwise approved `group.roster` entry gives a 96th member that role
+- THEN verification rejects it
+
 #### Scenario: Too few holders remain
 - GIVEN a `policy` rule of 2 of `owner` and two owners, one of whom lost every key
 - WHEN the remaining owner signs a `group.policy` entry that lowers the rule to 1
@@ -226,28 +261,38 @@ it for them.
 - WHEN an approved entry would drop one of them
 - THEN verification rejects it
 
-### Requirement: Incoming control signs
-A governing role SHALL be a role that a rule names in the policy in
-force after the entry. Every key that a `group.found` or `group.roster`
-entry adds under a member who holds a governing role SHALL sign that
-entry. A member who gains a governing role in an entry SHALL sign it
-with at least one of that member's keys. Such a signature SHALL count
-toward a rule only when its member held the rule's role before the
-entry.
+### Requirement: Every key signs the entry that adds it
+Every key SHALL sign the entry that adds it to the roster, whatever
+roles its member holds. Every key of a founding roster SHALL sign the
+founding entry. A member who gains a role in a `group.roster` entry
+SHALL sign that entry with at least one of that member's keys. Such a
+signature SHALL count toward a rule only when its member held the
+rule's role before the entry. A `group.policy` entry SHALL NOT require
+a signature from members whose role it gives a new power.
 
-#### Scenario: Owner named without consent
-- GIVEN a founding entry that lists three owners
+#### Scenario: Member named without consent
+- GIVEN a founding entry that lists three members
 - WHEN keys of only two of them have signed it
 - THEN verification rejects the founding entry
 
-#### Scenario: New owner has not signed
-- GIVEN a `group.roster` entry that adds a member with the `owner` role and enough owner approvals
+#### Scenario: New member has not signed
+- GIVEN a `group.roster` entry that adds a member and has enough approvals
 - WHEN no key of the new member has signed it
 - THEN verification rejects it
 
+#### Scenario: New member with a role no rule names
+- GIVEN a role that no rule names
+- WHEN an approved `group.roster` entry adds a member with only that role and the member's key has not signed
+- THEN verification rejects it
+
 #### Scenario: A key that was never shown to work
-- GIVEN a `group.roster` entry that adds a second key to an existing owner
+- GIVEN a `group.roster` entry that adds a second key to an existing member
 - WHEN that second key has not signed the entry
+- THEN verification rejects it
+
+#### Scenario: Promotion without consent
+- GIVEN a `group.roster` entry that gives an existing member the `owner` role, with enough approvals
+- WHEN no key of that member has signed it
 - THEN verification rejects it
 
 #### Scenario: Acceptance is not approval
@@ -255,10 +300,11 @@ entry.
 - WHEN one existing owner and the new member sign it
 - THEN the entry is not approved
 
-#### Scenario: Member with no governing role
-- GIVEN a role that no rule names
-- WHEN an approved `group.roster` entry adds a member with only that role and the member has not signed
-- THEN the entry is approved
+#### Scenario: A policy change makes a role governing
+- GIVEN members who hold a role that no rule names, each of whose keys signed the entry that added it
+- WHEN a `group.policy` entry that meets the `policy` rule names that role in a rule
+- THEN the entry is approved without signatures from those members
+- AND every key that can now count toward that rule has signed an earlier entry
 
 ### Requirement: An entry expires
 Every entry after the founding entry SHALL carry an expiry time in Unix
@@ -341,7 +387,8 @@ every member key. An exit receipt SHALL use the label
 `identikey/group/exit/v1` over the same fields as a settlement receipt.
 It SHALL be admissible only on a `group.policy` entry whose policy
 differs from the prior policy in the witness and in nothing else, and
-only when that entry meets the `policy` rule.
+only when that entry meets the `policy` rule. Heads over that entry and
+later entries SHALL be signed by the new witness.
 
 #### Scenario: Leaving a witness that refuses
 - GIVEN a group whose witness will not settle anything
@@ -359,16 +406,18 @@ only when that entry meets the `policy` rule.
 - THEN the entry is pending
 
 ### Requirement: Head freshness and no rollback
-A head SHALL be a strict Ed25519 signature by the current witness over
-the label `identikey/group/head/v1`, one zero byte, the group XID, the
+A head SHALL be a strict Ed25519 signature, by the witness named in the
+state at the head's sequence, over the label `identikey/group/head/v1`, one zero byte, the group XID, the
 sequence, the entry's content hash, a time in Unix seconds, and a
 32-byte nonce. A verifier SHALL reject a head whose time is more than
-300 seconds ahead of its own clock. A verifier SHALL retain the highest head it has accepted
-for a group and SHALL refuse a log that does not extend it. A relying
-party that installs a durable binding SHALL require its own nonce in
-the head and SHALL spend that nonce on install. A log that verifies
-without a head that meets the caller's freshness rule SHALL NOT
-authorize a new action.
+300 seconds ahead of its own clock. A verifier SHALL retain the highest
+head it has accepted for a group and SHALL refuse a log that does not
+extend it. Given two valid chains for one group where one extends the
+other, a verifier SHALL use the longer. A verifier that sent a nonce
+SHALL require it in the head, SHALL use that head once, and SHALL
+discard the nonce after 300 seconds. A log that verifies without a head
+that meets the caller's freshness rule SHALL NOT authorize a new
+action.
 
 #### Scenario: Rollback
 - GIVEN a verifier that has accepted a head at sequence 9
@@ -381,9 +430,24 @@ authorize a new action.
 - THEN it rejects the head
 
 #### Scenario: Wrong nonce
-- GIVEN a relying party that issued a nonce for an install
+- GIVEN a verifier that sent a nonce with its request
 - WHEN the head it receives carries a different nonce
-- THEN it does not install
+- THEN it refuses that head
+
+#### Scenario: Retired witness answers a verifier that knows better
+- GIVEN a verifier that has accepted a head at sequence 9, and a witness that the entry at sequence 7 replaced
+- WHEN the retired witness signs a fresh head over sequence 6 with the verifier's nonce
+- THEN the verifier refuses it
+
+#### Scenario: First contact with two sources
+- GIVEN a verifier meeting a group for the first time, a bundle that ends at sequence 6 with a fresh head by the witness named there, and a valid bundle that runs to sequence 9 and replaces that witness at sequence 7
+- WHEN it is given both
+- THEN it uses the longer chain and refuses the head over sequence 6
+
+#### Scenario: Head signed by the outgoing witness after its replacement
+- GIVEN a settled entry at sequence 7 that replaces the witness
+- WHEN the outgoing witness signs a head over sequence 7
+- THEN the verifier refuses that head
 
 #### Scenario: Old bundle still verifies
 - GIVEN a bundle from before a policy change, complete with its receipts and an old head
@@ -446,6 +510,88 @@ member's signature SHALL NOT be a signature of the group.
 - GIVEN an owner of a group and a message signed with that owner's key
 - WHEN a relying party is asked to accept it as the group's signature
 - THEN it refuses
+
+### Requirement: A grant is delegation under bounded staleness
+The holder of a grant SHALL act in its own name. A relying party that
+honors a live grant SHALL treat a revocation or policy change settled
+within the grant's maximum head age as possibly not yet visible. A live
+grant and a head SHALL NOT by themselves authorize an action whose
+effect outlasts the check, including a durable binding and a secret
+release. Group v1 SHALL NOT define a consume record.
+
+#### Scenario: Revoked inside the bound
+- GIVEN a grant with a maximum head age of 60 seconds, and a relying party holding a head 30 seconds old
+- WHEN a revocation of that grant settles and the relying party checks the grant against the head it holds
+- THEN the grant is live for that check
+- AND it is refused once the relying party holds a head that includes the revocation
+
+#### Scenario: Durable binding on a head alone
+- GIVEN a live grant and a fresh head that carries the relying party's nonce
+- WHEN the relying party asks whether this standard authorizes it to install a binding that persists after the check
+- THEN it does not
+
+#### Scenario: Handoff races an install
+- GIVEN a relying party that read a fresh head showing a live grant, and a policy change that voids the grant and settles before the party acts
+- WHEN the party looks to this standard for an ordering between its action and the policy change
+- THEN it finds none, and a profile that needs one defines an ordered consume record
+
+### Requirement: The witness is trusted for currentness in v1
+Settlement under `witness-v1` SHALL rely on a single operator for
+ordering, for its clock, and for currentness. A witness SHALL NOT be
+able to change a roster or a policy, to issue or restore a grant, or to
+make effective an entry that lacks its approvals. The standard SHALL
+state that a witness can refuse to settle, can date a receipt as it
+chooses, can settle two approved entries at one sequence, and can sign
+a head over an entry that is no longer the latest.
+
+#### Scenario: Backdated receipt
+- GIVEN an approved entry whose expiry passed yesterday and that was never settled
+- WHEN the witness signs a receipt today that carries a time before the expiry
+- THEN a verifier treats the entry as effective, and this standard does not detect the backdating
+
+#### Scenario: First contact with one stale source
+- GIVEN a verifier meeting a group for the first time and shown only a valid bundle that ends before a witness replacement, with a fresh head by the witness named there
+- WHEN it verifies
+- THEN it accepts, and this standard does not detect that the bundle is stale
+
+#### Scenario: Witness tries to add a member
+- GIVEN a `group.roster` entry that lacks its approvals and carries a valid witness receipt
+- WHEN a verifier replays the log
+- THEN the entry is rejected
+
+### Requirement: A freeze is permanent and remembered
+Two settlement records for different entries at one sequence SHALL
+freeze the group at the predecessor, whichever keys signed the
+receipts. No later entry, receipt, or witness replacement SHALL clear
+a freeze in v1. A verifier that has verified both records SHALL store
+the conflict durably, SHALL report conflict for that group afterward
+whatever bundle it is given, and SHALL treat no grant of that group as
+live.
+
+#### Scenario: Exit races an earlier approved entry
+- GIVEN an approved, unsettled `group.roster` entry at sequence 4 and a later approved witness replacement at sequence 4
+- WHEN the witness settles the roster entry and the exit key settles the replacement
+- THEN a verifier that holds both reports a conflict and the state at sequence 3
+
+#### Scenario: Two exits
+- GIVEN two different approved witness replacements at one sequence, each with an exit receipt
+- WHEN a verifier holds both
+- THEN it reports a conflict and the state at the predecessor
+
+#### Scenario: Restart after a freeze
+- GIVEN a verifier that recorded a conflict for a group and then restarted
+- WHEN it is given a bundle that contains only one of the two entries
+- THEN it still reports a conflict
+
+#### Scenario: Grant under a freeze
+- GIVEN a verifier that recorded a conflict for a group at sequence 4, and a grant standing in the state at sequence 3
+- WHEN a relying party checks the grant with that verifier
+- THEN the grant is refused
+
+#### Scenario: Replacement after a freeze
+- GIVEN a frozen group
+- WHEN its owners approve a new witness replacement at the frozen sequence and the exit key settles it
+- THEN verifiers that know of the conflict still report a conflict
 
 ### Requirement: Replay is a total function of the entries
 Replay SHALL depend on the entries alone and SHALL NOT read a clock or
@@ -518,14 +664,16 @@ when its own replay gives a different digest.
 - THEN verification rejects it even if its signatures and receipt are valid
 
 ### Requirement: Mechanisms and limits fail closed
-A policy SHALL declare its authorization, settlement, and secret-release
-mechanisms. Group v1 SHALL accept `quorum-v1`, `witness-v1`, and `none`
-respectively, and `visibility` `public`. Any other value SHALL be
-rejected. A roster SHALL hold at most 256 members, and a member SHALL
-hold at most 8 keys. An entry SHALL carry
-at most 64 signatures and SHALL be at most 65,536 bytes signed. Evidence
-over a limit SHALL be rejected and SHALL NOT be truncated. No failure
-SHALL fall back to a single administrator.
+A policy SHALL declare its authorization, settlement, anchor, and
+secret-release mechanisms. Group v1 SHALL accept `quorum-v1`,
+`witness-v1`, `none`, and `none` respectively, and `visibility`
+`public`. Any other value SHALL be rejected. A roster SHALL hold at
+most 256 members, and a member SHALL hold at most 8 keys. An entry
+SHALL carry at most 64 signatures by keys already on the roster, SHALL
+add at most 16 keys, and SHALL be at most 65,536 bytes signed. A
+founding roster SHALL hold at most 64 keys. Evidence over a limit SHALL
+be rejected and SHALL NOT be truncated. No failure SHALL fall back to a
+single administrator.
 
 #### Scenario: Unknown settlement mechanism
 - GIVEN a founding entry whose policy names a settlement mechanism other than `witness-v1`
@@ -537,10 +685,20 @@ SHALL fall back to a single administrator.
 - WHEN a v1 verifier reads it
 - THEN it rejects the entry
 
+#### Scenario: Group adopts an anchor
+- GIVEN a group whose sequence 5 entry is a `group.policy` entry that names an anchor mechanism other than `none`
+- WHEN a v1 verifier replays the log
+- THEN it stops at sequence 4 and authorizes no new action for that group
+
 #### Scenario: Too many signatures
-- GIVEN an entry that carries 65 signatures
+- GIVEN an entry that carries 65 signatures by keys already on the roster
 - WHEN a verifier reads it
 - THEN it rejects the entry and does not count the first 64
+
+#### Scenario: Too many keys added
+- GIVEN a `group.roster` entry that adds 17 keys
+- WHEN a verifier reads it
+- THEN it rejects the entry
 
 #### Scenario: Stripped evidence
 - GIVEN an entry that needs two owners and a receipt

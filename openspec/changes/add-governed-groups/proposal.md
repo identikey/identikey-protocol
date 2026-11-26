@@ -10,7 +10,10 @@ Advise is owed before act. Nothing here is activated.
 Preparation 2026-11-26: revised. Inputs are the user's two decisions
 (founding-entry XID, Forgejo profile reissued as a grant scope) and the
 NAOMS hive read, both recorded in `steer.md`. The contract at `d3f4a01`
-plus this note is the one advise reads. Authority: the user asked for
+plus this note is the one the first advise read. It was sent back
+(`reviews/2026-11-26-advise.md`, R1 to R9). The contract was revised
+for all nine, with the user's decisions on R1, R2, R3, and R6 recorded
+in `steer.md`. A fresh advise by the same reader is owed. Authority: the user asked for
 change, then architecture review. No activation was given.
 
 ## Why
@@ -41,10 +44,14 @@ change specifies the wire for that object.
 - Roster principals are member XIDs with their current approval keys.
 - One authorization mechanism, `quorum(k, role)`, evaluated per action.
   `k` is a number, `majority`, or `all`.
-- Incoming governing members and new keys sign the entry that adds
-  them. A change to a member's keys needs every rule that names a role
-  the member holds.
+- Every key signs the entry that adds it. A change to a member's keys
+  needs every rule that names a role the member holds. The `policy`
+  rule is the root of the group.
 - Every entry after the founding one expires.
+- A trusted witness in v1, with what it can and cannot do stated, and a
+  reserved `anchor` mechanism for a later canonical store.
+- Grants are delegation under bounded staleness. No durable install is
+  authorized by this standard.
 - Settlement by a dated witness receipt per entry, a witness-signed
   head for freshness, and an exit witness that can settle only a witness
   replacement.
@@ -64,9 +71,10 @@ Capabilities: `identikey-group` (ADDED). `identikey-keyspace`,
   key-derived guild XID with a separate binding proof. This change
   derives the XID from the founding entry instead. That is a changed
   commitment, decided by the user on 2026-11-26 (see `design.md`,
-  "Identifier"). Two more living requirements there need amending:
-  "Collective control evidence" and "Handoff phases are independently
-  abortable" (see `design.md`, "Map to the core governance contract").
+  "Identifier"). Three more living requirements there need amending:
+  "Collective control evidence", "Handoff phases are independently
+  abortable", and "Freshness witness for new authority" (see
+  `design.md`, "Map to the core governance contract").
   The core amendments are a separate change in identikey-core and are
   owed before this standard is relied on there.
 
@@ -103,9 +111,13 @@ group evidence.
   mechanism in v1.
 - Member-only (private) logs. `visibility` is reserved with one value.
 - Groups as members of groups, and nesting.
-- Reissuing `forgejo-ci-owner-v1` as a grant scope. Decided by the user
-  on 2026-11-26. A follow-up change in this repo once this contract is
-  accepted, then a rework of the verifier in identikey-core.
+- Reissuing `forgejo-ci-owner-v1` as a grant scope, and the ordered
+  consume record a durable owner binding needs. Decided by the user on
+  2026-11-26. A follow-up change in this repo once this contract is
+  accepted, then a rework of the verifier in identikey-core. Mjolnir's
+  owner binding waits for it.
+- The anchor: a single canonical store for a group's current head.
+  Reserved here, specified later.
 - identikey-core registrar (replica, proposal inbox, witness), HTTP
   routes, the CLI, the managed-account approval ceremony, and an OP
   token whose `sub` is a group XID. Product work in identikey-core.

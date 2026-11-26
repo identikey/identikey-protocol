@@ -98,7 +98,14 @@ plural signatures.
 The log is a chain, not a DAG. Each entry after the founding one has
 exactly one parent, the previous settled entry, and `seq` equal to the
 parent's plus one. Two entries with one parent are a fork. They are
-never merged. An unknown kind stops replay at its predecessor.
+never merged.
+
+A verifier that meets an entry it cannot implement, because of its kind
+or because its policy names a mechanism value the verifier does not
+know, stops at the predecessor. It reports the group as unsupported
+from that sequence and authorizes no new action on the earlier state. A
+later entry exists that it cannot read, so the earlier state is not
+known to be current.
 
 ### Entry envelope
 
@@ -160,6 +167,7 @@ Rule    := { "k": uint / "majority" / "all", "role": tstr }
 
 Policy  := { "mech": { "auth": "quorum-v1",
                        "settle": "witness-v1",
+                       "anchor": "none",
                        "release": "none" },
              "rules": { "roster": Rule, "policy": Rule,
                         ? "delegate": Rule, ? "revoke": Rule },
@@ -192,9 +200,19 @@ noticing. `State` does not contain the XID, so the founding entry can
 carry it. A v1 verifier replays from the founding entry. Starting from
 a later entry needs a trust anchor this standard does not define.
 
-Limits are fixed in v1: 256 members, 8 keys per member, 64 signatures
-on one entry (approvals and acceptances together), 65,536 bytes for one
-signed entry. Larger evidence is rejected, not truncated.
+Limits are fixed in v1:
+
+- 256 members, and 8 keys per member.
+- On one entry, at most 64 signatures by keys already on the roster,
+  and at most 16 keys added, each of which signs. That is 80 signatures
+  at most.
+- A founding roster holds at most 64 keys. All of them sign.
+- No rule may need more than 48 members (see "Lockout guard").
+- 65,536 bytes for one signed entry.
+
+Larger evidence is rejected, not truncated. A roster of 256 members
+does not mean 256 signatures can be carried. A large group governs
+through a smaller role.
 
 ### Reducer
 
@@ -299,10 +317,31 @@ Its signature counts like any other.
 
 An absent `delegate` or `revoke` rule makes that action unavailable.
 
-The founding entry is signed by every key of every member who holds a
-governing role (see "Acceptance"). That meets its own `policy` rule, and
-it is the incoming-control evidence ADR-013 asks for. A founder cannot
-name an owner who has not agreed.
+The founding entry is signed by every key in its roster (see
+"Acceptance"). That meets its own `policy` rule, and it is the
+incoming-control evidence ADR-013 asks for. A founder cannot name a
+member who has not agreed.
+
+### The policy rule is the root
+
+Whoever can pass the `policy` rule controls the group. A `group.policy`
+entry can rewrite every other rule, replace the witness, and void every
+grant. A high threshold on `delegate`, `revoke`, or `roster` does not
+bind the members who can pass `policy`. With `policy: 1 of admin` and
+`delegate: 2 of owner`, one admin can replace the policy with
+`delegate: 1 of admin` and then delegate alone. That is valid.
+
+The root protects itself. No sequence of valid entries gives the power
+to pass the `policy` rule to a set of members who could not already
+pass it: a `group.policy` entry needs the rule, and so does any
+`group.roster` entry that changes who holds its role or what keys they
+have.
+
+The other rules are protected against roster edits by the guard below,
+and are subordinate to `policy`. A group that wants an action to be
+harder than a policy change cannot have that in v1. Tooling should warn
+when another rule is stricter than `policy`, because the stricter rule
+then gives less protection than it appears to.
 
 Every signature attached to an entry must be attributable (see
 "Signatures"). A signature by a key outside the candidate keys rejects
@@ -328,35 +367,55 @@ A `group.roster` entry that changes which members hold role `R`, or
 that changes the keys of a member who holds `R`, must also satisfy
 every rule that names `R`.
 
-To gain the power to pass a rule, the group must already pass that
-rule. An admin under `roster: 1 of admin` cannot mint owners when
-`policy` is `2 of owner`. The same admin cannot put its own key on an
+Through a roster change, the power to pass a rule is gained only by
+passing that rule. An admin under `roster: 1 of admin` cannot mint
+owners when `policy` is `2 of owner`. The same admin cannot put its own key on an
 owner's seat. Dropping a member changes who holds that member's roles.
 
 ### Lockout guard
 
-An entry is rejected when, in the resulting state, any rule's role has
-no holder, or a numeric `k` is zero or greater than the number of
-distinct members holding the role. FOKS offers this as an opt-in. Here
-it always applies.
+An entry is rejected when, in the resulting state, for any rule:
+
+- its role has no holder, or
+- a numeric `k` is zero or greater than the number of distinct members
+  holding the role, or
+- the number of members the rule needs is greater than 48.
+
+FOKS offers the first two as an opt-in. Here all three always apply.
+
+The third keeps every rule within the signatures one entry can carry.
+`"all"` therefore allows at most 48 holders, and `"majority"` at most
+95. A roster entry that would add the 96th holder of a `"majority"`
+role is rejected.
+
+What the guard promises: each rule, taken alone, can be met by one
+entry. It does not promise that several rules can be met together. A
+roster entry that changes owners under `roster: 40 of admin` and
+`policy: 40 of owner`, with no member in both roles, would need 80
+approvals and cannot be carried. The `policy` rule alone can always be
+met, so the group repairs such a combination with a `group.policy`
+entry.
 
 ### Acceptance
 
-A governing role is a role that a rule names in the policy in force
-after the entry.
+- Every key signs the entry that adds it to the roster, whatever roles
+  its member holds. In a founding entry that is every key.
+- A member who gains a role in a `group.roster` entry signs that entry
+  with at least one of its keys.
 
-- Every key that a `group.found` or `group.roster` entry adds under a
-  member who holds a governing role signs that entry.
-- A member who gains a governing role in the entry signs it with at
-  least one of its keys.
+Nobody is on the roster without agreeing to it, and no key is on the
+roster that has not signed. So no key ever counts toward a rule before
+it has been shown to work, whichever entry later makes its role matter.
+An acceptance signature is not an approval. It counts toward a rule
+only when its member already held the rule's role before the entry.
 
-Nobody is given a governing role without agreeing to it, and no key
-counts toward a rule before it has been shown to work. An acceptance
-signature is not an approval. It counts toward a rule only when its
-member already held the rule's role before the entry.
+Adding a member needs the member present, with a key, at the time of
+the entry. The flow is invite, accept, admit.
 
-A `group.policy` entry does not ask for acceptance from holders of a
-role it newly names. An earlier quorum admitted those members.
+One exception, stated plainly: a `group.policy` entry can change what
+a role is able to do, and it asks no fresh consent from the members who
+hold that role. A member agrees to join a group whose root rule can do
+that. A member who does not want a new power can ask to be dropped.
 
 ### Expiry
 
@@ -430,6 +489,72 @@ the state digest.
 The witness holds no authority. It cannot author an entry. It can
 order, and it can refuse.
 
+### What the witness is trusted for
+
+`witness-v1` is one operator. A v1 verifier trusts it for three things:
+ordering, its clock, and currentness.
+
+What a witness cannot do, whatever it signs: change the roster or the
+rules, issue or restore a grant, or make an entry valid that lacks its
+approvals. A receipt on an invalid entry is not a settlement record.
+The hosted witness cannot take a group over.
+
+What a dishonest witness can do:
+
+- **Refuse.** It settles nothing. The exit key answers this (below).
+- **Backdate.** A receipt's time is the witness's word. An approved
+  entry that was never settled stays settleable by a dishonest witness
+  after its `exp` has passed in the world. Expiry protects against an
+  honest witness completing a stale proposal. It does not bind a
+  dishonest one.
+- **Freeze.** If two approved entries exist at one sequence, it can
+  settle both, or settle one while the exit key settles the other. It
+  cannot invent the second entry. The owners must have signed it.
+- **Hide.** It can sign a fresh head over an old entry and so conceal
+  a later revocation from a verifier that has not seen the later
+  entries.
+
+A witness that the group has replaced keeps one power. It is still the
+witness named in the states before its replacement, so it can sign a
+fresh head over that old prefix. A verifier that has already accepted a
+later head refuses it. A verifier meeting the group for the first time,
+or restored from an old snapshot, cannot tell from the XID alone.
+
+What limits this in v1:
+
+- A verifier keeps the highest head it has accepted and never goes
+  back.
+- A valid chain that extends another is the more current of the two. A
+  verifier given both uses the longer. A chain that runs past a witness
+  replacement proves the old witness is retired, because the
+  replacement entry is itself settled.
+- A verifier meeting a group for the first time should fetch from more
+  than one place.
+
+These reduce the exposure. They do not remove it. Removing it needs a
+place every verifier can check (see "Anchor").
+
+### Freeze
+
+Two settlement records for different entries at one sequence freeze the
+group at the predecessor. In v1 a freeze is permanent. No later entry,
+receipt, or witness replacement clears it.
+
+- A verifier that has verified both records stores the conflict (the
+  XID, the sequence, both entry hashes) as durably as its highest head.
+  It reports conflict for that group from then on, across restarts, and
+  whatever bundle it is given later.
+- Under a known conflict no grant is live and nothing new is
+  authorized. What was done before stays done.
+- A verifier that has seen only one of the two records carries on along
+  that one. v1 has no way to tell it. The anchor is that way.
+- The members found a new group under a new XID, and relying parties
+  bind to the new one.
+
+A hosted witness can therefore end a group in one case: the owners have
+left an approved entry unsettled at the current sequence and then
+approve a different one there. It still cannot capture the group.
+
 ### Exit witness
 
 `policy.exit` is a second key, held by the group's owners, distinct from
@@ -451,8 +576,55 @@ The exit key cannot order roster, rule, or grant entries. A group
 without `exit` depends on its witness to leave its witness, and tooling
 should say so at founding.
 
-A hostile witness can block an exit only by settling a competing valid
-entry at the same sequence, and it can only get one from the owners.
+The guarantee is conditional. The exit works when the witness refuses
+and no other approved entry is outstanding at that sequence. If the
+owners approved an ordinary entry there earlier and it was never
+settled, a dishonest witness can settle that entry while the exit key
+settles the replacement, and the group freezes. Waiting for the earlier
+entry to expire does not help, because the witness can backdate.
+Tooling should show an owner any approved, unsettled entry at the
+current sequence before the owner approves an exit, and should say that
+exiting then is a risk to the group.
+
+Two different witness replacements at one sequence, each with an exit
+receipt, are also two settlement records and freeze the group. The exit
+key is held by the owners, so that is the owners' own fault.
+
+After a witness replacement settles, heads for that entry and for later
+ones are signed by the new witness.
+
+### Anchor
+
+`mech.anchor` is `"none"` in v1. The slot is reserved for an optional,
+stronger level: one canonical store that every verifier can check for
+the truth about a group.
+
+An anchor holds at most one entry hash per `(xid, seq)`, keeps what it
+holds, and is readable by anyone. A verifier of an anchored group asks
+the anchor for the current head and refuses a log that disagrees. That
+removes the three things v1 leaves to trust:
+
+- A retired or dishonest witness cannot present an old prefix as
+  current, even to a verifier meeting the group for the first time.
+- A conflict is visible to every verifier, not only to the ones that
+  happened to receive both records.
+- With one more rule, the anchor's record at a sequence can choose
+  between two settled siblings, so a witness can no longer end a group.
+
+This is what ADR-013 calls a `registry-head` freshness witness. Which
+store, its trust rules, and its bytes belong to a later change.
+
+What v1 does so that the later change is an upgrade and not a break:
+
+- The mechanism slot exists, and a verifier fails closed on a value it
+  does not know.
+- A group adopts an anchor with a `group.policy` entry that changes
+  `mech.anchor`. A v1 verifier stops at that entry and authorizes
+  nothing further. An anchored group is never checked at the weaker
+  level by mistake.
+- What an anchor would record is already the head's subject: the XID,
+  the sequence, and the entry hash.
+- The XID does not change when a group adopts an anchor.
 
 ## Head and freshness
 
@@ -467,18 +639,39 @@ verifier rejects a head whose time is more than 300 seconds ahead of
 its own clock. A head's age is the verifier's clock minus the head's
 time.
 
+A head is signed by the witness named in the state at the head's
+sequence.
+
 - A verifier keeps the highest head it has accepted per XID. It refuses
   a log that does not extend that head.
-- A relying party that installs a durable binding sends its own nonce
-  and requires it back. It spends that nonce when it installs.
+- A verifier that sent a nonce requires it back, uses the answer once,
+  and forgets the nonce after the answer or after 300 seconds.
 - A relying party that checks a grant in use requires a head no older
   than the grant's `head_age`.
 
-Reading of ADR-013 decision 4, to be checked by advise: the consume
-record for a governed action is that action's settled log entry. It is
-ordered by the witness against every later handoff. Use of a grant is
-delegated action under the freshness the grant declares, which ADR-013
-leaves to policy.
+### What a head does not give
+
+A head says what the witness saw at a time. It does not order a relying
+party's action against a later revocation. A party can read a fresh
+head, a revocation can settle a moment later, and the party can still
+act inside `head_age`. A nonce does not close that gap.
+
+So v1 grants are delegation under bounded staleness, and nothing more:
+
+- The holder of a grant acts in its own name, with its own key. A
+  relying party that honors the grant accepts that a revocation or a
+  policy change settled within the last `head_age` seconds may not be
+  visible to it. The group chose that bound when it issued the grant.
+- This standard gives no authority for an action whose effect outlasts
+  the check: installing a durable binding, releasing a secret, or
+  anything else that the core contract requires to be consumed once and
+  ordered against a handoff ("Freshness witness for new authority",
+  ADR-013 decision 4). Such an action needs an ordered consume record.
+  A profile that wants one defines it, and it is a prerequisite of that
+  integration.
+
+This standard does not implement ADR-013 decision 4. Secret release is
+`none`, and no consume record is defined here.
 
 ## Grants
 
@@ -526,6 +719,13 @@ profile is marked experimental and has no production binding. The
 reissue is a follow-up change in this repo once this contract is
 accepted, and the verifier in identikey-core is reworked after it.
 
+Installing an owner binding is a durable action. A live grant and a
+fresh head are not enough for it (see "What a head does not give").
+Decided 2026-11-26 (user): the reissue change defines the ordered
+consume record for that install, and Mjolnir's owner binding waits for
+it. Lightning Admin's use of grants is bounded-staleness delegation and
+does not.
+
 ## Transport
 
 ```
@@ -572,7 +772,7 @@ change before core relies on this standard.
 
 | Core requirement | Here |
 |---|---|
-| Explicit selectable governance | Implemented. The policy names three mechanisms, unknown ones fail closed, and the founding entry is the signed bootstrap. |
+| Explicit selectable governance | Implemented. The policy names four mechanism slots, unknown values fail closed, and the founding entry is the signed bootstrap. |
 | Exact transition authorization | Implemented. A signature covers the kind, the group XID, the sequence, the parent (the prior accepted state), the action, and the resulting state digest. Distinct principals are counted under the prior policy. |
 | Full governance handoff | Implemented for roster and policy. No group key exists, so no key is retired. |
 | Optional predeclared recovery | Restricted. The only predeclared path is the exit key, and it replaces the witness and nothing else. Lost authority leaves governance unavailable, as the requirement allows. |
@@ -585,12 +785,14 @@ change before core relies on this standard.
 | Handoff phases are independently abortable | Restricted. v1 has no secret and no control key to put into effect, so the four phases are: prepare is the unsigned entry, authorize is its signatures, effect is empty, and activate is settlement. An entry is abandoned before activation by letting it expire. The full machine returns with key release. Core amendment to admit this restricted profile. |
 | Finality gates secret release | Settlement half implemented. Release is `none`. |
 | Adapter evidence is one transition | Implemented. Four verdicts, stated maxima, and every receipt and head commits to one entry hash. |
-| Freshness witness for new authority | Open. See review item R1. |
+| Freshness witness for new authority | Restricted. v1 offers no guild Sign, Auth, identity control, or secret release. A grant's holder acts in its own name under the staleness bound the grant declares. A durable installation needs an action-bound, ordered consume, which this standard does not define. Core amendment to say that delegated use under a declared bound is outside "new authority". |
 | Pre-activation effects are not current | Nothing is staged in v1. A pending entry has no effect. |
-| Migration finality is the outgoing descriptor | A witness replacement is settled by the outgoing witness. The exit path is the exceptional recovery "the predecessor policy already authorized". No incoming-readiness evidence is asked of the new witness. Open under review item R6. |
+| Migration finality is the outgoing descriptor | A witness replacement is settled by the outgoing witness. The exit path is the exceptional recovery "the predecessor policy already authorized". No incoming-readiness evidence is asked of the new witness, which is a restriction: a group can name a witness that never answers, and then leaves it by the exit key. |
 
 Nothing downstream should rely on this standard for collective control
-of an identity document until the three core amendments land.
+of an identity document until the core amendments land. There are four:
+"Stable collective XID", "Collective control evidence", "Handoff phases
+are independently abortable", and "Freshness witness for new authority".
 
 ## Prior art
 
@@ -676,15 +878,18 @@ that cost. It is the closest prior art for the governance half.
 
 ## Open decisions
 
-1. FROST, Registry settlement, private logs with group-scoped member
-   identifiers, and groups as members stay for later changes.
+1. FROST, the anchor and Registry settlement, private logs with
+   group-scoped member identifiers, and groups as members stay for
+   later changes.
 2. Whether `"majority"` should be the default that tooling proposes for
    `policy` and `roster`. Recommended: yes. It is 1 of 1 for a sole
    owner and grows with the roster.
 
-Settled: the XID derivation and the Forgejo profile (2026-11-26, user).
-Proof of possession for incoming holders is now required (see
-"Acceptance").
+Settled on 2026-11-26 by the user: the XID derivation; the Forgejo
+profile; grants as bounded-staleness delegation, with the ordered
+consume left to the Forgejo reissue; the `policy` rule as the root;
+every key signing the entry that adds it; a trusted witness in v1, with
+the anchor reserved as the optional stronger level.
 
 ## Unverified hypotheses
 
