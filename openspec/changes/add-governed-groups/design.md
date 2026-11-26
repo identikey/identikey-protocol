@@ -121,6 +121,11 @@ A group entry is an op with exactly this shape. Anything else fails.
   re-encodes to a different hash, so a group verifier rejects any entry
   whose decode reports an elision.
 
+A group verifier enforces this shape itself. The log codec reads the
+fields it knows and does not reject everything else. The verifier
+decodes the op, re-encodes it, and requires the result to equal the
+bytes it was given.
+
 Three values come from the unsigned envelope. They are different bytes.
 
 | Name | Definition | Used for |
@@ -141,7 +146,10 @@ Three values come from the unsigned envelope. They are different bytes.
   entry, plus the keys the entry adds. For the founding entry they are
   the keys of the founding roster.
 - Signatures carry no key identifier. Transport supplies one key per
-  signature, in wire order (`keys` in the bundle). Signature `i` must
+  signature, in wire order (`keys` in the bundle). Wire order is the
+  order of the signature assertions in the encoded envelope, which
+  Gordian sorts by assertion digest. It is not the order in which the
+  members signed. Signature `i` must
   verify under key `i`. Key `i` must be a candidate key. No key appears
   twice. If any of these fails, the entry as presented is rejected.
   That verdict is about the evidence. It says nothing about the group.
@@ -176,7 +184,8 @@ Policy  := { "mech": { "auth": "quorum-v1",
              "visibility": "public" }
 
 State   := { "seq": uint, "roster": [Member], "policy": Policy,
-             "grants": [bstr] }            ; live grant digests
+             "grants": [bstr] }            ; standing grant digests,
+                                           ; may be empty
 
 FoundBody    := { "v": 1, "salt": bstr, "roster": [Member],
                   "policy": Policy, "state": bstr }
@@ -203,10 +212,19 @@ a later entry needs a trust anchor this standard does not define.
 Limits are fixed in v1:
 
 - 256 members, and 8 keys per member.
-- On one entry, at most 64 signatures by keys already on the roster,
-  and at most 16 keys added, each of which signs. That is 80 signatures
-  at most.
-- A founding roster holds at most 64 keys. All of them sign.
+- On an entry after the founding one: at most 64 signatures by old
+  keys, and at most 16 added keys, each of which signs. That is 80
+  signatures at most.
+- The founding entry is exempt from the limit of 16. Its roster holds
+  at most 64 keys, all of them sign, and it carries no other signature.
+
+For an entry after the founding one, the old keys are the keys of the
+roster before the entry, under any member. The added keys are the keys
+of the roster after the entry that are not old keys. Every signature is
+by an old key or by an added key, never both, and is counted once. An
+old key that the entry removes can still sign as an approval, because
+approvals are judged against the state before the entry. For the
+founding entry every key is an added key.
 - No rule may need more than 48 members (see "Lockout guard").
 - 65,536 bytes for one signed entry.
 
@@ -228,14 +246,21 @@ Shape rules, for every body and for `State`:
 - Every array is sorted ascending and has no duplicate: `roster` and
   `set` by `xid`; `keys`, `drop`, `grants`, and `keep` bytewise; `roles`
   bytewise as UTF-8. dCBOR does not sort arrays, so this standard does.
-- An optional array that would be empty is omitted. A present empty
-  array fails. `keys` and `roles` are never empty.
+- The optional arrays are `set`, `drop`, and `keep`. One that would be
+  empty is omitted, and a present empty one fails. `roster`, `keys`,
+  and `roles` are required and never empty. `State.grants` is required
+  and may be empty: it is `[]` at founding, after the last grant is
+  revoked, and after a policy change that keeps none.
 - `xid`, `group`, a key, a grant digest, and `state` are 32 bytes. The
   founding `salt` is 16 bytes.
 - A role is 1 to 32 bytes from `a-z`, `0-9`, and `-`.
 - Integers are unsigned and fit in 64 bits.
 - `group` is the XID. `seq` is the prior `seq` plus one.
-- An entry whose result equals the prior state apart from `seq` fails.
+- An entry after the founding one whose result equals the prior state
+  apart from `seq` fails. The founding entry has no prior state. A
+  `group.policy` entry with the same policy that keeps every standing
+  grant is such a no-op and fails. One with the same policy that keeps
+  fewer grants changes the state and is valid: it voids the rest.
 
 Transitions:
 
@@ -252,7 +277,11 @@ Each of these fails:
 - A `group.roster` entry with neither `set` nor `drop`.
 - An `xid` in both `set` and `drop`.
 - A `drop` that names no present member.
-- A `set` member identical to the member already present.
+- A `set` member identical to the member already present, even when
+  the same entry changes another member.
+- A key that is under one member before the entry and under a
+  different member after it. A key moves between members in two
+  entries: it is removed in one and added in a later one.
 - A `keep` digest that is not in the prior `grants`. A voided or
   revoked grant cannot be restored by `keep`.
 - A `group.delegate` whose digest is already standing.
@@ -331,11 +360,17 @@ bind the members who can pass `policy`. With `policy: 1 of admin` and
 `delegate: 2 of owner`, one admin can replace the policy with
 `delegate: 1 of admin` and then delegate alone. That is valid.
 
-The root protects itself. No sequence of valid entries gives the power
-to pass the `policy` rule to a set of members who could not already
-pass it: a `group.policy` entry needs the rule, and so does any
+The root is changed only by the root. Changing the `policy` rule
+needs the `policy` rule as it stood before the entry. So does any
 `group.roster` entry that changes who holds its role or what keys they
-have.
+have. Members who cannot pass the rule cannot change it or its holders.
+
+An authorized change may hand power to members who could not pass the
+rule before. Two owners under `policy: 2 of owner` can lower it to 1,
+and then either governs alone. Three owners under `majority` can have
+two of them drop the other signer and the third, and the one who
+remains governs alone. Both are valid. The members who could pass the
+rule chose it.
 
 The other rules are protected against roster edits by the guard below,
 and are subordinate to `policy`. A group that wants an action to be
@@ -398,8 +433,9 @@ entry.
 
 ### Acceptance
 
-- Every key signs the entry that adds it to the roster, whatever roles
-  its member holds. In a founding entry that is every key.
+- Every added key signs its entry, whatever roles its member holds.
+  "Added" is defined with the limits above. In a founding entry that is
+  every key.
 - A member who gains a role in a `group.roster` entry signs that entry
   with at least one of its keys.
 
@@ -436,9 +472,11 @@ guard, signed by the new key. The lost key takes no part.
 
 When too few holders are left to meet a rule, that rule cannot be met
 and nothing lowers it. The group keeps its last state. Live grants run
-to their expiry, and a head can still be signed. If the stranded rule
-is `policy` or `roster`, the group cannot recover, and its members
-found a new group under a new XID. v1 has no recovery path that
+to their expiry, and a head can still be signed. A stranded `roster`,
+`delegate`, or `revoke` rule can be replaced by a `group.policy` entry
+while the `policy` rule can still be met. If the `policy` rule itself
+is stranded, the group cannot recover, and its members found a new
+group under a new XID. v1 has no recovery path that
 bypasses a rule, because any such path is a second, weaker rule.
 
 Tooling should say when a rule has no slack: one lost member strands
@@ -597,31 +635,42 @@ ones are signed by the new witness.
 
 `mech.anchor` is `"none"` in v1. The slot is reserved for an optional,
 stronger level: one canonical store that every verifier can check for
-the truth about a group.
+the truth about a group. ADR-013 calls this a `registry-head` freshness
+witness.
 
-An anchor holds at most one entry hash per `(xid, seq)`, keeps what it
-holds, and is readable by anyone. A verifier of an anchored group asks
-the anchor for the current head and refuses a log that disagrees. That
-removes the three things v1 leaves to trust:
+Nothing in this section is a guarantee of v1. A reserved slot protects
+nobody. These are the requirements a later anchor profile has to meet:
 
-- A retired or dishonest witness cannot present an old prefix as
-  current, even to a verifier meeting the group for the first time.
-- A conflict is visible to every verifier, not only to the ones that
-  happened to receive both records.
-- With one more rule, the anchor's record at a sequence can choose
-  between two settled siblings, so a witness can no longer end a group.
+- **Currentness.** A verifier of an anchored group can learn the
+  current head from the anchor, including on first contact, without
+  trusting a witness the group has retired. That needs a way to find
+  and trust the store that does not depend on the bundle the verifier
+  was handed.
+- **One answer.** The anchor says which entry is authoritative at a
+  sequence. That is canonical selection. It is not the same as
+  publishing every conflict: a second settled sibling can be withheld
+  from any store. A profile that also wants conflicts published says
+  how.
+- **Its own assumptions.** Which store, who runs it, how its answers
+  are verified, and what happens when it is unavailable are all
+  unspecified here. An anchor moves trust. It does not remove it.
 
-This is what ADR-013 calls a `registry-head` freshness witness. Which
-store, its trust rules, and its bytes belong to a later change.
+Which store, its trust rules, and its bytes belong to a later change.
 
 What v1 does so that the later change is an upgrade and not a break:
 
 - The mechanism slot exists, and a verifier fails closed on a value it
   does not know.
 - A group adopts an anchor with a `group.policy` entry that changes
-  `mech.anchor`. A v1 verifier stops at that entry and authorizes
-  nothing further. An anchored group is never checked at the weaker
-  level by mistake.
+  `mech.anchor`. A v1 verifier that reads that entry stops there and
+  authorizes nothing further. A verifier that has read it, and keeps
+  its highest head, does not later check that group at the weaker
+  level.
+- That protection reaches only verifiers that have seen the adoption
+  entry. A v1 verifier on first contact, shown only the prefix before
+  adoption with a fresh head from the witness named there, accepts it.
+  This is the stale first contact described above, and it stays until
+  an anchor profile supplies the independent way to find the store.
 - What an anchor would record is already the head's subject: the XID,
   the sequence, and the entry hash.
 - The XID does not change when a group adopts an anchor.
@@ -635,9 +684,9 @@ head = Ed25519(
 ```
 
 `nonce` is 32 bytes. All zero means the head answers no challenge. A
-verifier rejects a head whose time is more than 300 seconds ahead of
-its own clock. A head's age is the verifier's clock minus the head's
-time.
+verifier rejects a head whose time is more than 60 seconds ahead of its
+own clock. A head's age is the verifier's clock minus the head's time,
+and zero when the head's time is ahead.
 
 A head is signed by the witness named in the state at the head's
 sequence.
@@ -660,8 +709,14 @@ So v1 grants are delegation under bounded staleness, and nothing more:
 
 - The holder of a grant acts in its own name, with its own key. A
   relying party that honors the grant accepts that a revocation or a
-  policy change settled within the last `head_age` seconds may not be
-  visible to it. The group chose that bound when it issued the grant.
+  policy change settled within the bound may not be visible to it. The
+  bound is `head_age` seconds plus the 60 seconds of clock tolerance,
+  and it assumes the witness's clock is right. The group chose
+  `head_age` when it issued the grant.
+- A bundle that predates a revocation or a policy change still
+  verifies. A verifier refuses it when it has accepted a later head, or
+  when its head is older than the bound. Otherwise the verifier cannot
+  know, and that is the staleness the grant declares.
 - This standard gives no authority for an action whose effect outlasts
   the check: installing a durable binding, releasing a secret, or
   anything else that the core contract requires to be consumed once and
@@ -787,7 +842,7 @@ change before core relies on this standard.
 | Adapter evidence is one transition | Implemented. Four verdicts, stated maxima, and every receipt and head commits to one entry hash. |
 | Freshness witness for new authority | Restricted. v1 offers no guild Sign, Auth, identity control, or secret release. A grant's holder acts in its own name under the staleness bound the grant declares. A durable installation needs an action-bound, ordered consume, which this standard does not define. Core amendment to say that delegated use under a declared bound is outside "new authority". |
 | Pre-activation effects are not current | Nothing is staged in v1. A pending entry has no effect. |
-| Migration finality is the outgoing descriptor | A witness replacement is settled by the outgoing witness. The exit path is the exceptional recovery "the predecessor policy already authorized". No incoming-readiness evidence is asked of the new witness, which is a restriction: a group can name a witness that never answers, and then leaves it by the exit key. |
+| Migration finality is the outgoing descriptor | A witness replacement is settled by the outgoing witness. The exit path is the exceptional recovery "the predecessor policy already authorized". No incoming-readiness evidence is asked of the new witness, which is a restriction: a group can name a witness that never answers. It then leaves by the exit key, if one is configured and usable and no competing entry is outstanding. |
 
 Nothing downstream should rely on this standard for collective control
 of an identity document until the core amendments land. There are four:

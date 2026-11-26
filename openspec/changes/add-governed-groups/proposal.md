@@ -13,7 +13,11 @@ NAOMS hive read, both recorded in `steer.md`. The contract at `d3f4a01`
 plus this note is the one the first advise read. It was sent back
 (`reviews/2026-11-26-advise.md`, R1 to R9). The contract was revised
 for all nine, with the user's decisions on R1, R2, R3, and R6 recorded
-in `steer.md`. A fresh advise by the same reader is owed. Authority: the user asked for
+in `steer.md`. A second advise sent it back again on five
+statements that claimed more than the design gives
+(`reviews/2026-11-26-advise-2.md`, S1 to S5). The contract was revised
+for all five without a change of design. A fresh advise by the same
+reader is owed. Authority: the user asked for
 change, then architecture review. No activation was given.
 
 ## Why
@@ -92,8 +96,8 @@ enough distinct owners sign it, the witness settles it, and the head
 moves. A relying party is shown a grant, checks its digest against the
 log, checks a fresh head, and acts.
 Empty: an XID with no fetchable log is unknown. A verifier does not act.
-Failed: too few approvals, a missing receipt, two receipts at one
-sequence, a stale head, a revoked grant, or an unknown mechanism each
+Failed: too few approvals, a missing receipt, two settled entries at
+one sequence, a stale head, a revoked grant, or an unknown mechanism each
 give pending, conflict, or reject. None of them falls back to a single
 admin.
 Off: a verifier that does not implement `identikey-group` v1 refuses

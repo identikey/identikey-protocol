@@ -13,9 +13,15 @@
   - [x] R7 The lockout guard and the signature budget. `design.md` "Lockout guard" and the limits; delta scenarios "All of forty-nine" and "Majority crosses the limit".
   - [x] R8 A requirement-by-requirement map to the core governance contract. Added as `design.md` "Map to the core governance contract". Its R1 and R6 rows stay open.
   - [x] R9 Receipt identity when one entry has receipts with different times. Receipt times are no longer compared. Amended in `design.md` "Settlement" and the delta.
+- [x] Send-back `reviews/2026-11-26-advise-2.md` (same reader). Wording and consistency, no design change:
+  - [x] S1 The root invariant is authorization of change by the prior `policy` rule.
+  - [x] S2 `State.grants` may be empty; the no-op rule starts after founding.
+  - [x] S3 Founding is exempt from the 16-key limit; old and added keys are defined; a key cannot move between members in one entry.
+  - [x] S4 The old-bundle scenarios and the real staleness bound (`head_age` plus 60 seconds).
+  - [x] S5 The anchor section states requirements for a later profile, not guarantees.
 - [ ] Fresh advise after preparation
 - [ ] Spike H1: co-sign one `identikey-log` op with two non-actor keys and verify each. Record the result in `design.md`.
-- [ ] Write `docs/standards/identikey-group-v1.md` from this change's design and delta. Copy the domain labels, the body maps, and the fixed limits.
+- [ ] Write `docs/standards/identikey-group-v1.md` from this change's design and delta. Copy the domain labels, the body maps, and the fixed limits. Spell out the op's core map, the Gordian leaf and wrapper digest construction, the signature tag and layout, and the assertion digest order, or pin the format they come from. A Rust function name is not portable documentation.
 - [ ] Add the standard to the table in `docs/standards/README.md`.
 - [ ] Add a pointer from `docs/standards/identikey-keyspace-v1.md` §12 to the new standard. Keyspace v1 text otherwise stays as it is.
 - [ ] Name fixture hooks in the standard: founding XID, each kind, quorum accept and reject, `majority` and `all`, role and key guard, lockout guard, acceptance present and missing, expiry, receipt, receipt time order, equivocation, exit receipt, head rollback, grant live / revoked / voided / kept, state digest mismatch, unknown mechanism, unknown threshold form, the sign digest against the content hash, co-signers, an unattributable signature, an elided entry, each reducer rejection, two receipts for one entry, the rule limit of 48, an anchor adoption, a stored freeze.

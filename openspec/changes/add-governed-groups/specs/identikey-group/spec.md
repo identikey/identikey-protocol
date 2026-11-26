@@ -192,8 +192,10 @@ its own roster.
 A `group.policy` entry that meets the `policy` rule SHALL be able to
 replace every other rule, the witness, and the exit key. A threshold on
 another action SHALL NOT bind the members who can pass the `policy`
-rule. No sequence of valid entries SHALL give the power to pass the
-`policy` rule to a set of members who could not pass it before.
+rule. An entry that changes the `policy` rule, the members who hold its
+role, or the keys of those members SHALL meet the `policy` rule as it
+stood before that entry. Such an entry MAY leave the rule passable by
+members who could not pass it before.
 
 #### Scenario: Policy rewrites a stricter rule
 - GIVEN rules `policy` 1 of `admin`, `roster` 1 of `admin`, and `delegate` 2 of `owner`
@@ -204,6 +206,16 @@ rule. No sequence of valid entries SHALL give the power to pass the
 - GIVEN the same rules
 - WHEN one admin removes the `delegate` rule by a `group.policy` entry, gives itself the `owner` role by a `group.roster` entry, and restores the rule by a second `group.policy` entry
 - THEN all three entries are approved
+
+#### Scenario: Owners lower their own threshold
+- GIVEN owners A and B and a `policy` rule of 2 of `owner`
+- WHEN A and B sign a `group.policy` entry that sets the rule to 1 of `owner`
+- THEN the entry is approved, and A alone can pass the `policy` rule afterward
+
+#### Scenario: A majority drops the rest
+- GIVEN owners A, B, and C, with `policy` and `roster` both `majority` of `owner`
+- WHEN A and B sign a `group.roster` entry that drops B and C
+- THEN the entry is approved, and A alone can pass both rules afterward
 
 #### Scenario: The root cannot be reached from below
 - GIVEN rules `roster` 1 of `admin` and `policy` 2 of `owner`, and an admin who is not an owner
@@ -262,9 +274,11 @@ it for them.
 - THEN verification rejects it
 
 ### Requirement: Every key signs the entry that adds it
-Every key SHALL sign the entry that adds it to the roster, whatever
-roles its member holds. Every key of a founding roster SHALL sign the
-founding entry. A member who gains a role in a `group.roster` entry
+For an entry after the founding entry, the old keys SHALL be the keys
+of the roster before the entry and the added keys SHALL be the keys of
+the roster after the entry that are not old keys. For the founding
+entry every key SHALL be an added key. Every added key SHALL sign its
+entry, whatever roles its member holds. A member who gains a role in a `group.roster` entry
 SHALL sign that entry with at least one of that member's keys. Such a
 signature SHALL count toward a rule only when its member held the
 rule's role before the entry. A `group.policy` entry SHALL NOT require
@@ -410,7 +424,8 @@ A head SHALL be a strict Ed25519 signature, by the witness named in the
 state at the head's sequence, over the label `identikey/group/head/v1`, one zero byte, the group XID, the
 sequence, the entry's content hash, a time in Unix seconds, and a
 32-byte nonce. A verifier SHALL reject a head whose time is more than
-300 seconds ahead of its own clock. A verifier SHALL retain the highest
+60 seconds ahead of its own clock, and SHALL take a head's age as its
+own clock minus the head's time, or zero when the head's time is ahead. A verifier SHALL retain the highest
 head it has accepted for a group and SHALL refuse a log that does not
 extend it. Given two valid chains for one group where one extends the
 other, a verifier SHALL use the longer. A verifier that sent a nonce
@@ -449,10 +464,21 @@ action.
 - WHEN the outgoing witness signs a head over sequence 7
 - THEN the verifier refuses that head
 
-#### Scenario: Old bundle still verifies
-- GIVEN a bundle from before a policy change, complete with its receipts and an old head
-- WHEN it is presented as authority for a new action after the change
+#### Scenario: Old bundle, verifier knows better
+- GIVEN a bundle from before a policy change, complete with its receipts and its head, and a verifier that has accepted a head after the change
+- WHEN the bundle is presented as authority for a new action
 - THEN the action is refused
+
+#### Scenario: Old bundle, head too old
+- GIVEN the same bundle and a verifier that has not seen the change
+- WHEN the bundle's head is older than the caller's freshness rule allows
+- THEN the action is refused
+
+#### Scenario: Head slightly ahead
+- GIVEN a head dated 60 seconds ahead of the verifier's clock and a grant with a maximum head age of 60 seconds
+- WHEN the verifier checks the grant now
+- THEN the head's age is zero and the grant is live
+- AND 121 seconds later the head's age is 61 seconds and the grant is refused
 
 ### Requirement: Grants are detached and delegation comes first
 A `group.delegate` entry SHALL carry the digest of a grant and SHALL NOT
@@ -514,7 +540,8 @@ member's signature SHALL NOT be a signature of the group.
 ### Requirement: A grant is delegation under bounded staleness
 The holder of a grant SHALL act in its own name. A relying party that
 honors a live grant SHALL treat a revocation or policy change settled
-within the grant's maximum head age as possibly not yet visible. A live
+within the grant's maximum head age plus the 60-second clock tolerance
+as possibly not yet visible. A live
 grant and a head SHALL NOT by themselves authorize an action whose
 effect outlasts the check, including a durable binding and a secret
 release. Group v1 SHALL NOT define a consume record.
@@ -524,6 +551,12 @@ release. Group v1 SHALL NOT define a consume record.
 - WHEN a revocation of that grant settles and the relying party checks the grant against the head it holds
 - THEN the grant is live for that check
 - AND it is refused once the relying party holds a head that includes the revocation
+
+#### Scenario: Policy change inside the bound
+- GIVEN a grant with a maximum head age of 60 seconds, and a relying party holding a head 30 seconds old
+- WHEN a `group.policy` entry that does not keep the grant settles and the relying party checks the grant against the head it holds
+- THEN the grant is live for that check
+- AND it is refused once the relying party holds a head that includes the policy change
 
 #### Scenario: Durable binding on a head alone
 - GIVEN a live grant and a fresh head that carries the relying party's nonce
@@ -597,21 +630,56 @@ live.
 Replay SHALL depend on the entries alone and SHALL NOT read a clock or
 a grant body. The state SHALL be the sequence, the roster, the policy,
 and the standing grant digests. Every array in a body and in the state
-SHALL be sorted ascending without duplicates, an optional array SHALL
-be omitted when empty, and a present empty array SHALL fail. A
+SHALL be sorted ascending without duplicates. The optional arrays of a
+body SHALL be omitted when empty, and a present empty one SHALL fail.
+The standing grant digests of the state SHALL be present and MAY be
+empty. A
 `group.roster` entry SHALL remove the members it drops and SHALL
 replace or add the members it sets. A `group.policy` entry SHALL
 replace the policy and SHALL leave standing exactly the digests it
 keeps, each of which SHALL have been standing before it. A
 `group.delegate` entry SHALL add a digest that is not standing. A
 `group.revoke` entry SHALL remove a digest that is standing. An entry
-that leaves the state unchanged apart from the sequence SHALL fail. A
-bundle SHALL carry the whole chain from sequence 0 with no gap.
+after the founding entry that leaves the state unchanged apart from the
+sequence SHALL fail. A member in `set` that equals the member already
+present SHALL fail the entry. A key SHALL NOT pass from one member to
+another in one entry. A bundle SHALL carry the whole chain from
+sequence 0 with no gap.
 
 #### Scenario: Same log, different clocks
 - GIVEN one bundle with a standing grant whose body is not available
 - WHEN two verifiers replay it a year apart
 - THEN both compute the same state digests at every sequence
+
+#### Scenario: Founding with no grants
+- GIVEN a founding entry
+- WHEN a verifier computes its state
+- THEN the standing grant digests are an empty array, and the entry is accepted
+
+#### Scenario: Last grant revoked
+- GIVEN a group with one standing grant
+- WHEN a `group.revoke` entry that meets the `revoke` rule names it
+- THEN the entry is approved and the standing grant digests are an empty array
+
+#### Scenario: Policy restated with every grant kept
+- GIVEN a group with two standing grants
+- WHEN a `group.policy` entry carries the same policy and keeps both
+- THEN verification rejects it
+
+#### Scenario: Policy restated with fewer grants kept
+- GIVEN a group with two standing grants
+- WHEN a `group.policy` entry that meets the `policy` rule carries the same policy and keeps one
+- THEN the entry is approved and one grant is standing
+
+#### Scenario: Unchanged member beside a changed one
+- GIVEN a `group.roster` entry whose `set` lists one member with a new role and one member exactly as already present
+- WHEN a verifier applies it
+- THEN verification rejects it
+
+#### Scenario: Key moved between members
+- GIVEN a key listed under member A
+- WHEN a `group.roster` entry removes it from A and lists it under member B
+- THEN verification rejects it
 
 #### Scenario: Member in both set and drop
 - GIVEN a `group.roster` entry that names one XID in `set` and in `drop`
@@ -669,10 +737,13 @@ secret-release mechanisms. Group v1 SHALL accept `quorum-v1`,
 `witness-v1`, `none`, and `none` respectively, and `visibility`
 `public`. Any other value SHALL be rejected. A roster SHALL hold at
 most 256 members, and a member SHALL hold at most 8 keys. An entry
-SHALL carry at most 64 signatures by keys already on the roster, SHALL
-add at most 16 keys, and SHALL be at most 65,536 bytes signed. A
-founding roster SHALL hold at most 64 keys. Evidence over a limit SHALL
-be rejected and SHALL NOT be truncated. No failure SHALL fall back to a
+after the founding entry SHALL carry at most 64 signatures by old keys
+and SHALL add at most 16 keys. The founding entry SHALL be exempt from
+the limit of 16, its roster SHALL hold at most 64 keys, and it SHALL
+carry no signature other than those of its roster's keys. Each
+signature SHALL be counted once. An entry SHALL be at most 65,536 bytes
+signed. Evidence over a limit SHALL be rejected and SHALL NOT be
+truncated. No failure SHALL fall back to a
 single administrator.
 
 #### Scenario: Unknown settlement mechanism
@@ -690,10 +761,35 @@ single administrator.
 - WHEN a v1 verifier replays the log
 - THEN it stops at sequence 4 and authorizes no new action for that group
 
+#### Scenario: First contact before an anchor adoption
+- GIVEN a group that adopted an anchor at sequence 5, and a v1 verifier meeting it for the first time
+- WHEN the verifier is shown only the entries through sequence 4 and a fresh head by the witness named there
+- THEN it accepts, and this standard does not detect that the group has since adopted an anchor
+
 #### Scenario: Too many signatures
 - GIVEN an entry that carries 65 signatures by keys already on the roster
 - WHEN a verifier reads it
 - THEN it rejects the entry and does not count the first 64
+
+#### Scenario: Founding with seventeen keys
+- GIVEN a founding entry whose roster holds 17 keys, all of which signed it
+- WHEN a verifier reads it
+- THEN the limit of 16 added keys does not apply and the entry is accepted
+
+#### Scenario: Founding with sixty-four keys
+- GIVEN a founding entry whose roster holds 64 keys, all of which signed it
+- WHEN a verifier reads it
+- THEN the entry is accepted
+
+#### Scenario: Founding with sixty-five keys
+- GIVEN a founding entry whose roster holds 65 keys
+- WHEN a verifier reads it
+- THEN it rejects the entry
+
+#### Scenario: Removed key still approves
+- GIVEN an owner whose key an approved `group.roster` entry removes
+- WHEN that key signs the entry
+- THEN the signature counts as that owner's approval and as one signature by an old key
 
 #### Scenario: Too many keys added
 - GIVEN a `group.roster` entry that adds 17 keys
