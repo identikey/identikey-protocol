@@ -65,17 +65,24 @@ never the group's signature.
 ### 2.1 Ed25519 profile
 
 Every signature in this standard is Ed25519 and is checked the same
-way. This is the profile of `forgejo-ci-owner-v1`.
+way. This is the profile `forgejo-ci-owner-v1` names, made exact.
 
-- A key is valid when its 32 bytes decode to a curve point. A key is
-  weak when that point has small order. A weak or invalid key is
-  rejected wherever it appears: on a roster, as a witness key, as an
-  exit key.
-- Verification is strict: the scalar `S` is canonical, neither the key
-  nor `R` has small order, and the equation is checked without cofactor
-  multiplication. This is `verify_strict` in `ed25519-dalek` 2.x.
+- A key is valid when its 32 bytes are the canonical encoding of a
+  curve point, as RFC 8032 section 5.1.3 decodes it: the `y` coordinate
+  is below the field prime, and a zero `x` does not carry the sign bit.
+- A key is weak when that point has small order.
+- A weak or invalid key is rejected wherever it appears: on a roster,
+  as a witness key, as an exit key.
+- Verification is strict: the scalar `S` is canonical, `R` decodes,
+  neither the key nor `R` has small order, and the equation is checked
+  without cofactor multiplication by comparing the recomputed `R` with
+  the given one as encoded bytes. This is `verify_strict` in
+  `ed25519-dalek` 2.x.
 - A verifier checks that a key is valid before it uses the key. Some
-  libraries abort on a key that is not a point.
+  libraries abort on a key that is not a point. Some accept a
+  non-canonical encoding: `ed25519-dalek` 2.x decodes a `y` at or above
+  the field prime. A verifier re-encodes the decoded point and requires
+  the same 32 bytes.
 
 No other signature algorithm is accepted in v1. An ML-DSA signature on
 an entry fails.
@@ -196,6 +203,9 @@ assertion digest = SHA-256( SHA-256( D9 9C 40 03 )
 `3` is the Gordian known value `'signed'`. As a digest input it is
 tagged 40000, which gives the four bytes `D9 9C 40 03`.
 
+The array header is the dCBOR one for `1 + n` items: one byte `80 + (1
++ n)` up to 23 items, and `98` followed by the count above that.
+
 - Each signature is Ed25519 over the 32 bytes of `sign_digest`. It is
   not over `entry_hash`.
 - Assertions are ordered by ascending assertion digest, compared as
@@ -240,7 +250,9 @@ about the evidence. It says nothing about the group.
 A signature by an old key is an **approval**. It counts once per
 member, however many of that member's keys sign, toward each rule whose
 role the member held in the state before the entry. A signature by an
-added key is an **acceptance** (§8.5). It is not an approval.
+added key is never an approval and never counts toward a rule, whatever
+roles its member held. It shows that the key works and that its holder
+consents (§8.5). The founding entry is the one exception (§8.1).
 
 Note. The `identikey-log` crate's generic `verify` checks every
 signature against `actor`, so it rejects every co-signed group entry. A
@@ -339,8 +351,10 @@ exactly these values.
 | `mech.release` | `none` | no secret release |
 | `visibility` | `public` | the log is readable by anyone who has it |
 
-Any other value fails closed (§15). A `k` that is not a number,
-`"majority"`, or `"all"` fails.
+No other value is applied. A founding entry that names one is
+rejected with its group. A later entry that names one is unreadable
+(§15). A `k` that is not a number, `"majority"`, or `"all"` is an
+invalid entry, not an unreadable one.
 
 ### 5.4 Limits
 
@@ -415,7 +429,9 @@ keys on one member are several devices of one principal. Approvals are
 counted per member XID, not per key.
 
 - A key appears under at most one member.
-- A member key is never the witness key or the exit key.
+- A member key is never the witness key or the exit key, and the exit
+  key is never the witness key. An entry whose resulting state breaks
+  either rule is rejected.
 - The log asserts that a key speaks for an XID. It does not prove it.
   The quorum that admitted the member vouches for that link. A relying
   party that wants more resolves the member's own XID document. The log
@@ -559,9 +575,17 @@ Nobody is on the roster without agreeing to it, and no key is on the
 roster that has not signed. So no key ever counts toward a rule before
 it has been shown to work, whichever entry later makes its role matter.
 
-An acceptance is not an approval. With `roster: 2 of owner`, an entry
-that adds a new owner and is signed by one existing owner and the new
-member is not approved.
+A member who gains a role may sign with an old key or with an added
+one. Signed with an old key, that one signature is the member's consent
+and also its approval for the roles it already held. A sole admin under
+`roster: 1 of admin` who gives itself a new role and signs with the key
+it already had has approved and consented.
+
+A signature by an added key is consent and nothing more. With
+`roster: 2 of owner`, an entry that adds a new owner and is signed by
+one existing owner and the new member is not approved. An entry that
+adds key X to owner A's seat, signed by owner B and by X, has one
+approval, not two.
 
 Adding a member needs the member present, with a key, at the time of
 the entry. The flow is invite, accept, admit.
@@ -735,10 +759,12 @@ exit_receipt = Ed25519(
 ```
 
 An exit receipt is admissible on one kind of entry only: a
-`group.policy` entry whose policy differs from the prior policy in
-`witness` and nothing else. The signing key is the prior policy's
-`exit`. The `policy` rule still has to be met. On any other entry an
-exit receipt is not a settlement record, and the entry is pending.
+`group.policy` entry whose resulting state differs from the prior state
+in `seq` and in `policy.witness`, and in nothing else. So it keeps
+every standing grant. The signing key is the prior policy's `exit`,
+which the entry leaves unchanged. The `policy` rule still has to be
+met. On any other entry an exit receipt is not a settlement record, and
+the entry is pending.
 
 A hosted witness that refuses service cannot hold the group. The exit
 key cannot order roster, rule, or grant entries. After a witness
@@ -789,10 +815,10 @@ What v1 does so that the later change is an upgrade and not a break:
 - The mechanism slot exists, and a verifier fails closed on a value it
   does not know (§15).
 - A group adopts an anchor with a `group.policy` entry that changes
-  `mech.anchor`. A v1 verifier that reads that entry stops there,
-  authorizes nothing further, and stores that fact for the group. A
-  verifier that has stored it does not later check that group at the
-  weaker level.
+  `mech.anchor`. To a v1 verifier that is an unreadable entry. Once it
+  is established (§15), the verifier stops there, authorizes nothing
+  further, and stores that fact for the group. A verifier that has
+  stored it does not later check that group at the weaker level.
 - That protection reaches only verifiers that have seen the adoption
   entry. A v1 verifier on first contact, shown only the prefix before
   adoption with a fresh head from the witness named there, accepts it.
@@ -819,10 +845,21 @@ head = Ed25519(
   its own clock.
 - A head's **age** is the verifier's clock minus the head's time, and
   zero when the head's time is ahead.
+- A head names an entry of the chain the verifier holds: its sequence
+  is not past the last entry, and its entry hash is the entry at that
+  sequence. A head that names anything else is rejected.
+- A head that verifies is accepted and stored, whatever its age. Age
+  matters only to the freshness rule of an action.
 - A verifier keeps the highest head it has accepted per XID. It refuses
   a log that does not extend that head.
+- A new action needs a head over the last entry of the longest valid
+  chain the verifier holds for the group. A head over an earlier entry
+  of that chain authorizes nothing, even when the same witness is still
+  in office. "The state at the head" is therefore the state at the end
+  of the chain.
 - A verifier that sent a nonce requires it back, uses the answer once,
-  and forgets the nonce after the answer or after 300 seconds.
+  and forgets the nonce after the answer or after 300 seconds. A
+  verifier that sent none does not interpret the nonce.
 - A log that verifies without a head that meets the caller's freshness
   rule authorizes no new action.
 - A relying party that checks a grant in use requires a head no older
@@ -897,9 +934,12 @@ The log carries the digest. The holder carries the body and presents
 it. A public log then shows that a grant exists and not who holds it or
 what it covers. A `group.delegate` entry never carries the body.
 
-`group` is the XID. The `salt` is 16 bytes. `head_age` is in seconds
-and is at least 1. `nbf` and `exp` are Unix seconds. A body that breaks
-these shapes is never live.
+`group` is the XID. `v` is 1. The `salt` is 16 bytes. `head_age` is in
+seconds and is at least 1. `nbf` and `exp` are Unix seconds. The map is
+closed at its top level. `holder` and `scope` are open inside. The
+presented body is canonical dCBOR: a relying party re-encodes what it
+decoded and requires the same bytes, and the digest is over those
+bytes. A body that breaks these shapes is never live.
 
 A grant is **standing** when its digest is in `State.grants`. A grant
 is **live** for a relying party when all hold:
@@ -907,8 +947,10 @@ is **live** for a relying party when all hold:
 - its digest is standing in the state at the head,
 - the presented body hashes to that digest, and its `group` is the XID,
 - `nbf <= exp`, and `nbf <= now <= exp`,
-- the head's age is not greater than `head_age`, and
-- the verifier holds no conflict for the group (§9.3).
+- the head is over the last entry of the chain (§10), and its age is
+  not greater than `head_age`, and
+- the verifier has stored no conflict (§9.3) and no unsupported finding
+  (§15) for the group.
 
 A policy change voids earlier grants unless it restates them in `keep`.
 A revoked grant is refused once the relying party holds a head that
@@ -959,7 +1001,9 @@ bundle that starts later or skips a sequence is rejected.
 `rival` carries settled entries that compete with an entry in the chain
 at the same sequence. A verifier checks a rival exactly as it checks a
 chain entry, against the state at that sequence's predecessor. A rival
-that verifies is a second settlement record there.
+that verifies is a second settlement record there. A rival that fails
+any check, or that is the chain's own entry at that sequence, is
+ignored. It does not reject the bundle.
 
 `by` says which label and which key the receipt uses. `head.entry` is
 the entry hash at `head.seq`.
@@ -984,6 +1028,10 @@ Output, one of four:
 | conflict | two settlement records at one sequence; state at the predecessor |
 | reject | with the failing evidence |
 
+Unsupported (§15) is a reject whose reason is the sequence the verifier
+could not read. It is the one rejection that is about the group and
+that the verifier stores.
+
 Collection, discovery, and storage of bundles sit outside the verifier.
 
 What a verifier stores per XID, all of it with the same durability:
@@ -995,13 +1043,12 @@ What a verifier stores per XID, all of it with the same durability:
 For each entry, against the state at its predecessor:
 
 1. The signed entry is the exact bytes of §4.3 and within the size
-   limit. A kind the verifier does not implement is handled by §15.
+   limit.
 2. For the founding entry, the entry bytes hash to the XID and there is
    no parent. For any other entry, `group` is the XID, `seq` is the
    prior `seq` plus one, and the one parent hash is the predecessor's
    entry hash.
-3. The body meets the shape rules (§5.2). A mechanism value the
-   verifier does not know is handled by §15.
+3. The body meets the shape rules (§5.2).
 4. The signatures check (§4.4) and the limits hold (§5.4).
 5. The transition succeeds (§6) and the roster rules hold (§7).
 6. The rule for the kind is met, with the role and key guard (§8.3),
@@ -1013,36 +1060,66 @@ An entry that fails any of 1 to 7 is rejected, and a receipt on it
 counts for nothing. An entry that passes them and has no settlement
 record is pending.
 
+An unreadable entry does not go through steps 2 to 8. After step 1 it
+gets the four checks of §15 and no others.
+
 Then, for the bundle: every rival is checked the same way, the head is
 checked (§10), and the stored record is consulted. A grant body, when
 given, is checked against the state at the head (§11).
 
 ---
 
-## 15. Unsupported entries
+## 15. Unreadable entries
 
-A verifier that meets an entry it cannot implement, because of its kind
-or because its policy names a mechanism value the verifier does not
-know, stops at the predecessor.
+An entry is **unreadable** to a verifier when its kind is one the
+verifier does not implement, or when it is a `group.policy` entry whose
+policy names a `mech` value or a `visibility` value the verifier does
+not know.
 
-- It reports the group as unsupported from that sequence. It may report
-  the earlier state as history. It does not skip ahead.
-- It authorizes no new action on the earlier state. A later entry
-  exists that it cannot read, so the earlier state is not known to be
-  current.
-- It stores the XID and the sequence it could not read, and keeps
-  reporting this for the group whatever shorter bundle it is given
-  later, with whatever head.
+A verifier reads `kind` first. In a `group.policy` body it reads `mech`
+and `visibility` before it applies the closed-map rule to anything
+else, so that a later version's policy is unreadable and not malformed.
 
-A founding entry that names an unknown mechanism is a group the
-verifier rejects outright.
+A founding entry that is unreadable is a group the verifier rejects.
 
-Open issue. As written, this rule does not say what the verifier must
-have checked about the unreadable entry before it stores the finding. A
-freeze is stored only after two settlement records verify (§9.3). The
-same care is owed here, or anyone who can hand a verifier a bundle can
-stop that verifier for the group. Tracked in `add-governed-groups`.
-An implementation should not build this rule until it is settled.
+A verifier does not interpret the rest of the body of an unreadable
+entry. It does not read `exp`. It checks what it can:
+
+1. The bytes are a well-formed signed entry (§4.3), and its one parent
+   is an entry the verifier has accepted for this group. Its sequence
+   is that parent's plus one. It may arrive in `entries` or in `rival`.
+2. Every signature verifies under the key supplied for it, no key
+   appears twice, and the proposer's key is an old key and signed. A
+   supplied key that is not an old key is not counted and is not a
+   reason to reject, because the verifier cannot know which keys the
+   entry adds.
+3. The signatures by old keys meet the `policy` rule of the state
+   before the entry.
+4. A receipt verifies under the witness key of the policy before the
+   entry, over that sequence and this entry's hash.
+
+When all four hold, the entry is **established**. The group's root and
+its witness have moved the group past what this verifier can read.
+
+- The verifier stops at the predecessor. It may report the earlier
+  state as history. It does not skip ahead.
+- It reports the group as unsupported from that sequence and authorizes
+  no new action on the earlier state, which is no longer known to be
+  current. No grant of the group is live.
+- It stores the XID and the sequence, and keeps reporting this for the
+  group whatever bundle it is given later, with whatever head.
+
+When any of the four fails, the entry is rejected as evidence, like any
+other invalid entry. Nothing is stored, and the verdict says nothing
+about the group. Without this, anyone who could hand a verifier a
+bundle could stop that verifier for the group with a made-up entry.
+
+Note. A later version that adds a kind approved under a lesser rule
+than `policy` does not stop a v1 verifier for good. That verifier
+rejects the evidence and falls back on head freshness, like any
+verifier that has not seen a later entry. A group that wants v1
+verifiers to stop for good adopts the new mechanism with a
+`group.policy` entry, which the `policy` rule approves.
 
 ---
 
@@ -1123,6 +1200,7 @@ Each slot is one or more cases with an expected verdict.
 | `signature-unattributable` | One extra signature by a key outside the candidate keys. Rejected as presented. |
 | `signature-same-key-twice` | Two signatures by one key. Rejected. |
 | `key-weak` | An added key that is a small-order point, and one that is not a point. Rejected. |
+| `key-non-canonical` | A witness key whose `y` is encoded as the field prime plus three. Rejected. |
 | `signature-ml-dsa` | An ML-DSA signature. Rejected. |
 | `entry-elided` | A signature assertion elided, and a content assertion elided. Rejected though signatures verify. |
 | `entry-shape` | A timestamp assertion, a second parent, a missing body, a non-canonical encoding. Each rejected. |
@@ -1141,7 +1219,8 @@ Each slot is one or more cases with an expected verdict.
 | `lockout-guard` | A role left with no holder, `k` of zero, `k` above the holders, a removal that strands a rule. Each rejected. |
 | `rule-limit-48` | `all` of 49 rejected. The 96th holder of a `majority` role rejected. |
 | `acceptance-present` | A new member and a second key, each signing its entry. Accepted. |
-| `acceptance-missing` | A new member unsigned, an added key unsigned, a promotion unsigned. Each rejected. Acceptance does not count as approval. |
+| `acceptance-missing` | A new member unsigned, an added key unsigned, a promotion unsigned. Each rejected. |
+| `added-key-never-approves` | A new owner's signature does not count toward `roster`. Key X added to owner A's seat does not count as A. A promotion signed with an old key is consent and approval. |
 | `policy-makes-role-governing` | A policy change names a role in a rule with no signatures from its holders. Accepted. |
 | `expiry` | A receipt dated after `exp` is not a settlement record. One dated before stays effective on late replay. |
 | `receipt` | Transcript bytes and a valid receipt. Wrong key and wrong XID are pending. |
@@ -1152,17 +1231,21 @@ Each slot is one or more cases with an expected verdict.
 | `equivocation` | Two settled siblings. Conflict, state at the predecessor. |
 | `freeze-stored` | After a recorded conflict, a bundle with one sibling still reports conflict. A grant standing at the predecessor is refused. A later replacement does not clear it. |
 | `exit-receipt` | A witness-only replacement settled by the exit key. Accepted, and later heads are by the new witness. |
-| `exit-not-admissible` | An exit receipt on a roster entry, and on a replacement that also changes a rule. Pending. |
+| `exit-not-admissible` | An exit receipt on a roster entry, on a replacement that also changes a rule, and on a replacement that drops a standing grant. Pending. |
+| `exit-is-witness` | A policy whose exit key is its witness key. Rejected. |
 | `exit-conflict` | An exit races a settled ordinary entry. Two exits. Conflict. |
 | `witness-is-member-key` | A policy whose witness key is a member key. Rejected. |
 | `head` | Transcript bytes and a valid head. |
 | `head-rollback` | A stored head at 9, a log ending at 7. Refused. |
 | `head-future` | A head one hour ahead. Rejected. One 60 seconds ahead has age zero. |
-| `head-nonce` | A different nonce. Refused. |
+| `head-nonce` | A different nonce. Refused. A non-zero nonce to a verifier that sent none is not interpreted. |
+| `head-behind-chain` | Entries 0 to 9, a revocation at 8, the same witness, a fresh head over 7. Nothing authorized. |
+| `head-past-chain` | Entries 0 to 7 and a head over 9. Rejected. |
+| `head-old-still-stored` | A verified head at 9 that is too old to authorize, then a log ending at 7. Refused. |
 | `head-retired-witness` | A head by a replaced witness over the old prefix, against a stored later head. Refused. A head by the outgoing witness over the replacement entry. Refused. |
 | `chain-longer-wins` | Two valid chains, one extending the other. The longer is used. |
 | `grant-live` | Body, digest, window, and head age all good. |
-| `grant-refused` | Altered body, another group's XID, outside the window, head too old, shape broken. |
+| `grant-refused` | Altered body, another group's XID, outside the window, head too old, shape broken, an extra top-level key, a non-canonical body. |
 | `grant-head-age-limit` | Computed age 60 passes `head_age` 60. Age 61 fails. |
 | `grant-revoked` | Refused against a head that includes the revocation. |
 | `grant-voided` | A policy change without `keep`. Refused. |
@@ -1172,10 +1255,13 @@ Each slot is one or more cases with an expected verdict.
 | `reducer-rejections` | One case per rejection in §6, and one per shape rule in §5.2. |
 | `mechanism-unknown` | A founding policy with another `settle` value. Rejected. |
 | `threshold-form-unknown` | A `k` that is not a number, `majority`, or `all`. Rejected. |
-| `kind-unknown` | An unknown kind at sequence 3. State at 2, nothing authorized, and still nothing when later given the shorter log with a fresh head. |
-| `anchor-adoption` | A policy entry at sequence 5 with another `anchor` value. Stops at 4, stored, nothing authorized. |
+| `unreadable-established` | An unknown kind at sequence 3, approved under `policy` and settled. State at 2, nothing authorized, and still nothing when later given the shorter log with a fresh head. A grant standing at 2 is refused. |
+| `unreadable-not-established` | The same entry with no witness receipt, and with approvals below the `policy` rule. Rejected as evidence, nothing stored, and a later valid entry at that sequence is accepted. |
+| `unreadable-policy` | A policy entry with an unknown `settle` value and an undefined key. Unreadable, not malformed. An unknown `visibility` likewise. |
+| `anchor-adoption` | An established policy entry at sequence 5 with another `anchor` value. Stops at 4, stored, nothing authorized. |
 | `limits` | 65 signatures by old keys, 17 added keys, a founding roster of 17 keys, of 64, of 65, an entry over 65,536 bytes. A removed key still approves. |
 | `bundle-gap` | Entries 0, 1, 3. Rejected. |
+| `rival-ignored` | A rival whose receipt is by another key. The chain is reported as without it. |
 | `replay-no-clock` | One bundle replayed at two times. Same state digests. |
 
 Suggested path when filled: `docs/standards/vectors/group-v1/`.

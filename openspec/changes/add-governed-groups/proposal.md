@@ -19,6 +19,17 @@ key derivation, so the SHA-256 labels here stand. Spike H1 is go
 (`docs/spikes/add-governed-groups-h1/finding.md`). It found no reason
 to change the contract, so no fresh advise is owed.
 
+Preparation 2026-11-27, second note: revised. Writing the standard
+(`6abb7e8`) and an independent conformance read of it found eight
+places where the accepted contract left an implementer guessing or
+left a hole. The largest: a verifier was told to store "unsupported"
+for a group without being told what to verify first, so anyone who
+could hand it a bundle could stop it for that group. The contract is
+amended for all eight (P1 to P8 in `tasks.md`), in `design.md`, the
+delta, and the standard together. The accept at `9252484` does not
+cover the amended contract. A fresh advise by the same reader is owed,
+and the user's word on P1 and P4.
+
 Preparation 2026-11-26: revised. Inputs are the user's two decisions
 (founding-entry XID, Forgejo profile reissued as a grant scope) and the
 NAOMS hive read, both recorded in `steer.md`. The contract at `d3f4a01`

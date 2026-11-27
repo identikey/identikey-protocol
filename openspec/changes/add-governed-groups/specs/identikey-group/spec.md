@@ -32,11 +32,7 @@ Entries SHALL be `identikey-log` operations of kind `group.found`,
 The founding entry SHALL have sequence 0 and no parent. Every other
 entry SHALL name exactly one parent, the previous settled entry, SHALL
 carry the group XID, and SHALL carry a sequence one greater than its
-parent's. Two entries with the same parent SHALL NOT be merged. A
-verifier SHALL stop at the predecessor of an entry whose kind, or whose
-policy mechanism value, it does not implement, SHALL NOT authorize a
-new action for that group on the earlier state, and SHALL store that
-finding and keep to it whatever shorter log it is given later. Bodies SHALL be canonical dCBOR, and an unknown key at
+parent's. Two entries with the same parent SHALL NOT be merged. Bodies SHALL be canonical dCBOR, and an unknown key at
 any depth SHALL fail. An entry SHALL have a body, SHALL have no
 dependencies, negative acknowledgements, target fingerprint, or
 timestamp, and SHALL carry no elided, salted, or undefined assertion.
@@ -66,12 +62,52 @@ timestamp, and SHALL carry no elided, salted, or undefined assertion.
 - WHEN a verifier reads it
 - THEN verification rejects it even though its signatures still verify
 
-#### Scenario: Unknown kind
-- GIVEN a log whose sequence 3 entry has a kind the verifier does not implement
+### Requirement: An unreadable entry stops a verifier only when established
+An entry SHALL be unreadable to a verifier when its kind is one the
+verifier does not implement, or when it is a `group.policy` entry whose
+policy names a mechanism value or a visibility value the verifier does
+not know. A verifier SHALL read the kind first, and in a `group.policy`
+body SHALL read the mechanism and visibility values before it applies
+the closed-map rule to the rest. A founding entry that is unreadable
+SHALL be rejected with its group. A verifier SHALL NOT interpret the
+rest of the body of an unreadable entry. An unreadable entry SHALL be established
+only when its bytes are a well-formed signed entry whose one parent is
+an entry the verifier has accepted for the group, every signature
+verifies under the key supplied for it with no key twice, the
+proposer's key is an old key and signed, the signatures by old keys
+meet the `policy` rule of the state before the entry, and a receipt
+verifies under the witness key of the policy before the entry over the
+next sequence and the entry's content hash. For an established
+unreadable entry the verifier SHALL stop at the predecessor, SHALL NOT
+authorize a new action for that group, SHALL store the group and the
+sequence, and SHALL keep to that finding whatever bundle it is given
+later. An unreadable entry that is not established SHALL be rejected as
+evidence, and the verifier SHALL store nothing about the group because
+of it. Unsupported SHALL be reported as a rejection that names the
+sequence.
+
+#### Scenario: Unknown kind, established
+- GIVEN a log whose sequence 3 entry has a kind the verifier does not implement, carries signatures by old keys that meet the `policy` rule, and has a receipt by the witness in office
 - WHEN the verifier replays the log
 - THEN it reports the state at sequence 2 and does not skip ahead
 - AND it authorizes no new action for that group
 - AND it still authorizes none when later given only the entries through sequence 2 with a fresh head
+
+#### Scenario: Made-up entry of an unknown kind
+- GIVEN a valid log through sequence 2, and a sequence 3 entry of an unknown kind that carries no receipt by the witness in office
+- WHEN a verifier is given both
+- THEN it rejects that entry as evidence and stores nothing about the group
+- AND it accepts a later bundle whose sequence 3 entry is valid, approved, and settled
+
+#### Scenario: Unknown kind approved below the root
+- GIVEN rules `policy` 2 of `owner` and `roster` 1 of `admin`, and a sequence 3 entry of an unknown kind signed by one admin with a witness receipt
+- WHEN a verifier reads it
+- THEN it rejects that entry as evidence and stores nothing about the group
+
+#### Scenario: A later version's policy
+- GIVEN an established `group.policy` entry whose policy names an unknown settlement mechanism and also carries a key this standard does not define
+- WHEN a v1 verifier reads it
+- THEN it treats the entry as unreadable, not as malformed, and stops at the predecessor
 
 ### Requirement: Roster principals are member XIDs
 A roster entry SHALL name a member XID, one or more 32-byte Ed25519
@@ -98,8 +134,12 @@ SHALL be verifiable without resolving any member's own XID document.
 ### Requirement: Member signatures are exact
 A member signature SHALL be a strict Ed25519 signature over the 32-byte
 SHA-256 Gordian digest of the entry's wrapped unsigned envelope. It
-SHALL NOT be a signature over the entry's content hash. Every signing
-key SHALL be a valid, non-weak Ed25519 verification key. An entry SHALL
+SHALL NOT be a signature over the entry's content hash. Every key this
+standard names, the witness key and the exit key included, SHALL be a
+valid, non-weak Ed25519 verification key. A key SHALL be valid only
+when its 32 bytes are the canonical encoding of a curve point, with the
+`y` coordinate below the field prime and no sign bit on a zero `x`. A
+key SHALL be weak when the point has small order. An entry SHALL
 be presented with one key per attached signature, in wire order. Each
 signature SHALL verify under its key, each key SHALL be a key of the
 roster before the entry or a key the entry adds, and no key SHALL
@@ -136,6 +176,11 @@ No signature algorithm other than Ed25519 SHALL be accepted in v1.
 - GIVEN an entry that adds a member key that is a small-order Ed25519 point
 - WHEN a verifier checks it
 - THEN verification rejects it
+
+#### Scenario: Non-canonical key
+- GIVEN a `group.policy` entry that names a witness key whose `y` coordinate is encoded as the field prime plus three
+- WHEN a verifier checks it
+- THEN verification rejects it, even though some Ed25519 libraries decode that encoding to a point
 
 #### Scenario: Post-quantum signature
 - GIVEN an entry that carries an ML-DSA signature
@@ -281,9 +326,10 @@ of the roster before the entry and the added keys SHALL be the keys of
 the roster after the entry that are not old keys. For the founding
 entry every key SHALL be an added key. Every added key SHALL sign its
 entry, whatever roles its member holds. A member who gains a role in a `group.roster` entry
-SHALL sign that entry with at least one of that member's keys. Such a
-signature SHALL count toward a rule only when its member held the
-rule's role before the entry. A `group.policy` entry SHALL NOT require
+SHALL sign that entry with at least one of that member's keys, old or
+added. A signature by an added key SHALL NOT count toward any rule. A
+signature SHALL count toward a rule only when it is by an old key and
+its member held the rule's role before the entry. A `group.policy` entry SHALL NOT require
 a signature from members whose role it gives a new power.
 
 #### Scenario: Member named without consent
@@ -315,6 +361,16 @@ a signature from members whose role it gives a new power.
 - GIVEN a `roster` rule of 2 of `owner` and an entry that adds a new owner
 - WHEN one existing owner and the new member sign it
 - THEN the entry is not approved
+
+#### Scenario: Added key on a seat that already holds the role
+- GIVEN a `roster` rule and a `policy` rule of 2 of `owner`, owners A and B, and a `group.roster` entry that adds key X to A's seat
+- WHEN B's key and X sign it and no old key of A signs
+- THEN the entry is not approved
+
+#### Scenario: Consent with an old key
+- GIVEN a `roster` rule of 1 of `admin` and an admin who gives itself a role that no rule names
+- WHEN that admin signs the entry with a key it already had
+- THEN the entry is approved, and that signature is both its approval and its consent
 
 #### Scenario: A policy change makes a role governing
 - GIVEN members who hold a role that no rule names, each of whose keys signed the entry that added it
@@ -399,10 +455,14 @@ witness SHALL NOT be able to author an entry.
 
 ### Requirement: An exit witness can only replace the witness
 A policy MAY name an exit key, distinct from the witness key and from
-every member key. An exit receipt SHALL use the label
-`identikey/group/exit/v1` over the same fields as a settlement receipt.
-It SHALL be admissible only on a `group.policy` entry whose policy
-differs from the prior policy in the witness and in nothing else, and
+every member key. An entry whose resulting state has an exit key equal
+to its witness key or to a member key SHALL be rejected. An exit
+receipt SHALL use the label
+`identikey/group/exit/v1` over the same fields as a settlement receipt,
+and SHALL be signed by the exit key of the prior policy.
+It SHALL be admissible only on a `group.policy` entry whose resulting
+state differs from the prior state in the sequence and the witness and
+in nothing else, and
 only when that entry meets the `policy` rule. Heads over that entry and
 later entries SHALL be signed by the new witness.
 
@@ -421,18 +481,34 @@ later entries SHALL be signed by the new witness.
 - WHEN its only receipt is an exit receipt
 - THEN the entry is pending
 
+#### Scenario: Exit key voids the grants
+- GIVEN a group with two standing grants and an approved `group.policy` entry that changes only the witness and keeps one grant
+- WHEN its only receipt is an exit receipt
+- THEN the entry is pending
+
+#### Scenario: New witness is the exit key
+- GIVEN an approved `group.policy` entry that names the exit key as the new witness
+- WHEN a verifier applies it
+- THEN verification rejects it
+
 ### Requirement: Head freshness and no rollback
 A head SHALL be a strict Ed25519 signature, by the witness named in the
 state at the head's sequence, over the label `identikey/group/head/v1`, one zero byte, the group XID, the
 sequence, the entry's content hash, a time in Unix seconds, and a
 32-byte nonce. A verifier SHALL reject a head whose time is more than
 60 seconds ahead of its own clock, and SHALL take a head's age as its
-own clock minus the head's time, or zero when the head's time is ahead. A verifier SHALL retain the highest
+own clock minus the head's time, or zero when the head's time is ahead. A head SHALL name an entry of
+the chain the verifier holds, by a sequence not past the last entry and
+the content hash of the entry at that sequence, and a head that names
+anything else SHALL be rejected. A head that verifies SHALL be accepted
+and retained whatever its age. A verifier SHALL retain the highest
 head it has accepted for a group and SHALL refuse a log that does not
-extend it. Given two valid chains for one group where one extends the
+extend it. A new action SHALL need a head over the last entry of the
+longest valid chain the verifier holds for the group. Given two valid chains for one group where one extends the
 other, a verifier SHALL use the longer. A verifier that sent a nonce
 SHALL require it in the head, SHALL use that head once, and SHALL
-discard the nonce after 300 seconds. A log that verifies without a head
+discard the nonce after 300 seconds. A verifier that sent none SHALL
+NOT interpret the nonce. A log that verifies without a head
 that meets the caller's freshness rule SHALL NOT authorize a new
 action.
 
@@ -461,6 +537,21 @@ action.
 - WHEN it is given both
 - THEN it uses the longer chain and refuses the head over sequence 6
 
+#### Scenario: Head behind the chain, same witness
+- GIVEN a bundle with entries 0 through 9, a revocation at sequence 8, no witness change, and a fresh head over sequence 7
+- WHEN a relying party checks the revoked grant
+- THEN the head authorizes nothing and the grant is refused
+
+#### Scenario: Head past the chain
+- GIVEN a bundle with entries 0 through 7 and a head over sequence 9
+- WHEN a verifier checks it
+- THEN it rejects the head
+
+#### Scenario: Old head still counts against rollback
+- GIVEN a verifier that verified a head at sequence 9 that was too old for the caller's freshness rule
+- WHEN it is later given a valid log and a fresh head that end at sequence 7
+- THEN it refuses that log
+
 #### Scenario: Head signed by the outgoing witness after its replacement
 - GIVEN a settled entry at sequence 7 that replaces the witness
 - WHEN the outgoing witness signs a head over sequence 7
@@ -488,10 +579,13 @@ carry the grant body. The digest SHALL be SHA-256 of the label
 `identikey/group/grant/v1`, one zero byte, and the grant's canonical
 dCBOR. A grant SHALL name the group, a holder, a scope with a kind, a
 validity window, a maximum head age of at least one second, and a
-16-byte salt. A grant SHALL be live only when its digest is standing in
+16-byte salt. Its map SHALL be closed at the top level, its version
+SHALL be 1, and the presented body SHALL be canonical dCBOR, with the
+digest taken over the bytes presented. A grant SHALL be live only when its digest is standing in
 the state at the head, the presented body hashes to that digest and
-names this group, the current time is inside its window, and the head
-is no older than its maximum head age. Group v1 SHALL NOT define a group signing key. A
+names this group, the current time is inside its window, the head
+is no older than its maximum head age, and the verifier has stored no
+conflict and no unsupported finding for the group. Group v1 SHALL NOT define a group signing key. A
 member's signature SHALL NOT be a signature of the group.
 
 #### Scenario: Live grant
@@ -507,6 +601,16 @@ member's signature SHALL NOT be a signature of the group.
 #### Scenario: Grant for another group
 - GIVEN a grant body that names a different group and whose digest is standing in this group
 - WHEN a relying party checks it
+- THEN the grant is refused
+
+#### Scenario: Grant body with an extra key
+- GIVEN a grant body that carries a top-level key this standard does not define
+- WHEN a relying party checks it
+- THEN the grant is refused
+
+#### Scenario: Grant under an unsupported finding
+- GIVEN a verifier that has stored an unsupported finding for a group at sequence 5, and a grant standing in the state at sequence 4
+- WHEN a relying party checks the grant with that verifier
 - THEN the grant is refused
 
 #### Scenario: Outside the window
@@ -670,7 +774,8 @@ after the founding entry that leaves the state unchanged apart from the
 sequence SHALL fail. A member in `set` that equals the member already
 present SHALL fail the entry. A key SHALL NOT pass from one member to
 another in one entry. A bundle SHALL carry the whole chain from
-sequence 0 with no gap.
+sequence 0 with no gap. A rival entry in a bundle that fails any check
+SHALL be ignored and SHALL NOT reject the bundle.
 
 #### Scenario: Same log, different clocks
 - GIVEN one bundle with a standing grant whose body is not available
@@ -742,6 +847,11 @@ sequence 0 with no gap.
 - WHEN a new `group.delegate` entry that meets the `delegate` rule carries the same digest
 - THEN the grant is standing again
 
+#### Scenario: Rival that does not verify
+- GIVEN a valid bundle and a rival at sequence 4 whose receipt is by a key that is not the witness
+- WHEN a verifier reads the bundle
+- THEN it ignores the rival and reports the chain as it would without it
+
 #### Scenario: Bundle with a gap
 - GIVEN a bundle whose entries run 0, 1, 3
 - WHEN a verifier reads it
@@ -761,7 +871,9 @@ when its own replay gives a different digest.
 A policy SHALL declare its authorization, settlement, anchor, and
 secret-release mechanisms. Group v1 SHALL accept `quorum-v1`,
 `witness-v1`, `none`, and `none` respectively, and `visibility`
-`public`. Any other value SHALL be rejected. A roster SHALL hold at
+`public`. No other value SHALL be applied: a founding entry that names
+one SHALL be rejected, and a later entry that names one SHALL be
+unreadable. A roster SHALL hold at
 most 256 members, and a member SHALL hold at most 8 keys. An entry
 after the founding entry SHALL carry at most 64 signatures by old keys
 and SHALL add at most 16 keys. The founding entry SHALL be exempt from
@@ -783,7 +895,7 @@ single administrator.
 - THEN it rejects the entry
 
 #### Scenario: Group adopts an anchor
-- GIVEN a group whose sequence 5 entry is a `group.policy` entry that names an anchor mechanism other than `none`
+- GIVEN a group whose sequence 5 entry is a `group.policy` entry that names an anchor mechanism other than `none`, meets the `policy` rule, and has a receipt by the witness in office
 - WHEN a v1 verifier replays the log
 - THEN it stops at sequence 4 and authorizes no new action for that group
 

@@ -55,6 +55,15 @@
 
 ## Skipped / still open
 
+- Proposed by the author on 2026-11-27 and not yet confirmed by the
+  user. Both are in the contract as written, pending that word:
+  - A verifier stores an unsupported finding only for an unreadable
+    entry that the prior `policy` quorum approved and the witness in
+    office settled. Alternatives: a receipt alone is enough, or an
+    unknown kind is never stored.
+  - An exit receipt is admissible only when the entry changes the
+    witness and nothing else in the state, so it keeps every grant.
+
 - FROST, Registry settlement, private logs, groups as members.
 - Group-scoped member identifiers (NAOMS writes a per-hive pseudonym,
   never the root identity). Not in v1. The roster bytes already allow

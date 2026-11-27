@@ -100,13 +100,57 @@ exactly one parent, the previous settled entry, and `seq` equal to the
 parent's plus one. Two entries with one parent are a fork. They are
 never merged.
 
-A verifier that meets an entry it cannot implement, because of its kind
-or because its policy names a mechanism value the verifier does not
-know, stops at the predecessor. It reports the group as unsupported
-from that sequence and authorizes no new action on the earlier state. A
-later entry exists that it cannot read, so the earlier state is not
-known to be current. It stores this for the group and keeps reporting
-it, whatever shorter bundle it is given later.
+### Unreadable entries
+
+An entry is unreadable to a verifier when its kind is one the verifier
+does not implement, or when it is a `group.policy` entry whose policy
+names a `mech` value or a `visibility` value the verifier does not
+know. A verifier reads `kind` first. In a `group.policy` body it reads
+`mech` and `visibility` before it applies the closed-map rule to
+anything else, so that a later version's policy is unreadable and not
+malformed. A founding entry that is unreadable is a group the verifier
+rejects.
+
+A verifier does not interpret the rest of the body of an unreadable
+entry. It does not read `exp`. It checks what it can:
+
+- The bytes are a well-formed signed entry, and its one parent is an
+  entry the verifier has accepted for this group. Its sequence is that
+  parent's plus one. It may arrive in `entries` or in `rival`.
+- Every signature verifies under the key supplied for it, no key
+  appears twice, and the proposer's key is an old key and signed. A
+  supplied key that is not an old key is not counted and is not a
+  reason to reject, because the verifier cannot know which keys the
+  entry adds.
+- The signatures by old keys meet the `policy` rule of the state before
+  the entry.
+- A receipt verifies under the witness key of the policy before the
+  entry, over the next sequence and this entry's hash.
+
+When all four hold, the entry is an established unreadable entry. The
+group's root and its witness have moved the group past what this
+verifier can read. The verifier stops at the predecessor. It reports
+the group as unsupported from that sequence and authorizes no new
+action on the earlier state, which is no longer known to be current. It
+stores the XID and the sequence as durably as its highest head, and
+keeps reporting this whatever bundle it is given later.
+
+When any of the four fails, the entry is rejected as evidence, like any
+other invalid entry. Nothing is stored, and the verdict says nothing
+about the group. Without this, anyone who could hand a verifier a
+bundle could stop that verifier for the group with a made-up entry. A
+freeze is stored only after two settlement records verify, and the same
+care applies here.
+
+The rule costs something. A later version that adds a kind approved
+under a lesser rule than `policy` does not stop a v1 verifier
+permanently. That verifier rejects the evidence and falls back on head
+freshness, like any verifier that has not seen a later entry. A group
+that wants v1 verifiers to stop for good adopts the new mechanism with
+a `group.policy` entry, which the `policy` rule approves.
+
+A `k` that is not a number, `"majority"`, or `"all"` is not an
+unreadable entry. It is an invalid one.
 
 ### Entry envelope
 
@@ -142,7 +186,17 @@ Three values come from the unsigned envelope. They are different bytes.
   including ML-DSA.
 - Verification is strict Ed25519, and every key is a valid, non-weak
   Ed25519 verification key. This is the same profile as receipts and as
-  `forgejo-ci-owner-v1`.
+  `forgejo-ci-owner-v1`. A key is valid when its 32 bytes are the
+  canonical encoding of a curve point, as RFC 8032 section 5.1.3
+  decodes it: the `y` coordinate is below the field prime, and a zero
+  `x` does not carry the sign bit. A key is weak when the point has
+  small order. This applies to every key the standard names, the
+  witness key and the exit key included. A library that accepts a
+  non-canonical encoding is not enough by itself: the verifier
+  re-encodes the decoded point and requires the same 32 bytes. Strict
+  verification also rejects a non-canonical `S`, an `R` that does not
+  decode or has small order, and compares the recomputed `R` as
+  encoded bytes, with no cofactor multiplication.
 - The candidate keys for an entry are the keys in the roster before the
   entry, plus the keys the entry adds. For the founding entry they are
   the keys of the founding roster.
@@ -443,8 +497,12 @@ entry.
 Nobody is on the roster without agreeing to it, and no key is on the
 roster that has not signed. So no key ever counts toward a rule before
 it has been shown to work, whichever entry later makes its role matter.
-An acceptance signature is not an approval. It counts toward a rule
-only when its member already held the rule's role before the entry.
+A signature by an added key is never an approval and never counts
+toward a rule, whatever roles its member held. Only a signature by an
+old key counts, and only toward rules whose role its member held before
+the entry. A member who gains a role may sign with an old key or with
+an added one. Signed with an old key, that one signature is the
+member's consent and also its approval for the roles it already held.
 
 Adding a member needs the member present, with a key, at the time of
 the entry. The flow is invite, accept, admit.
@@ -597,7 +655,9 @@ approve a different one there. It still cannot capture the group.
 ### Exit witness
 
 `policy.exit` is a second key, held by the group's owners, distinct from
-the witness key and from every member key.
+the witness key and from every member key. An entry whose resulting
+state has an exit key equal to its witness key or to a member key is
+rejected.
 
 ```
 exit_receipt = Ed25519(
@@ -606,8 +666,11 @@ exit_receipt = Ed25519(
 ```
 
 An exit receipt is admissible on one kind of entry only: a
-`group.policy` entry whose policy differs from the prior policy in
-`witness` and nothing else. The `policy` rule still has to be met.
+`group.policy` entry whose resulting state differs from the prior state
+in `seq` and in `policy.witness`, and in nothing else. So it keeps
+every standing grant. The signing key is the `exit` of the prior
+policy, which the entry leaves unchanged. The `policy` rule still has
+to be met.
 
 This is the predeclared path ADR-013 allows for leaving a settlement
 backend. A hosted witness that refuses service cannot hold the group.
@@ -663,12 +726,13 @@ What v1 does so that the later change is an upgrade and not a break:
 - The mechanism slot exists, and a verifier fails closed on a value it
   does not know.
 - A group adopts an anchor with a `group.policy` entry that changes
-  `mech.anchor`. A v1 verifier that reads that entry stops there and
-  authorizes nothing further. It stores that fact for the group (the
-  XID and the sequence it could not read) as durably as its highest
-  head, because the head it accepted before the adoption does not
-  record it. A verifier that has stored it does not later check that
-  group at the weaker level.
+  `mech.anchor`. To a v1 verifier that is an unreadable entry (see
+  "Unreadable entries"). Once it is established, the verifier stops
+  there and authorizes nothing further. It stores that fact for the
+  group (the XID and the sequence it could not read) as durably as its
+  highest head, because the head it accepted before the adoption does
+  not record it. A verifier that has stored it does not later check
+  that group at the weaker level.
 - That protection reaches only verifiers that have seen the adoption
   entry. A v1 verifier on first contact, shown only the prefix before
   adoption with a fresh head from the witness named there, accepts it.
@@ -694,10 +758,21 @@ and zero when the head's time is ahead.
 A head is signed by the witness named in the state at the head's
 sequence.
 
+- A head names an entry of the chain the verifier holds: its `seq` is
+  not past the last entry, and its entry hash is the entry at that
+  sequence. A head that names anything else is rejected.
+- A head that verifies is accepted and stored, whatever its age. Age
+  matters only to the freshness rule of an action.
 - A verifier keeps the highest head it has accepted per XID. It refuses
   a log that does not extend that head.
+- A new action needs a head over the last entry of the longest valid
+  chain the verifier holds for the group. A head over an earlier entry
+  of that chain authorizes nothing, even when the same witness is still
+  in office. "The state at the head" is therefore the state at the end
+  of the chain.
 - A verifier that sent a nonce requires it back, uses the answer once,
-  and forgets the nonce after the answer or after 300 seconds.
+  and forgets the nonce after the answer or after 300 seconds. A
+  verifier that sent none does not interpret the nonce.
 - A relying party that checks a grant in use requires a head no older
   than the grant's `head_age`.
 
@@ -780,8 +855,14 @@ live for a relying party when all hold:
 - `nbf <= exp`, and `nbf <= now <= exp`
 - the head is no older than `head_age` seconds
 
-The grant `salt` is 16 bytes. `head_age` is at least 1. A body that
-breaks these shapes is never live.
+The grant `salt` is 16 bytes. `head_age` is at least 1. `v` is 1. The
+map is closed at its top level, and `holder` and `scope` are open
+inside. The presented body is canonical dCBOR: a relying party
+re-encodes what it decoded and requires the same bytes, and the digest
+is over those bytes. A body that breaks these shapes is never live.
+
+No grant is live for a verifier that has stored a conflict or an
+unsupported finding for the group.
 
 A policy change voids earlier grants unless it restates them. That is
 ADR-013's "a delegation dies at handoff unless the incoming policy
@@ -832,7 +913,9 @@ bundle that starts later or skips a sequence is rejected. `rival`
 carries settled entries that compete with an entry in the chain at the
 same sequence. A verifier checks a rival exactly as it checks a chain
 entry, against the state at that sequence's predecessor. A rival that
-verifies is a second settlement record there.
+verifies is a second settlement record there. A rival that fails any
+check, or that is the chain's own entry at that sequence, is ignored.
+It does not reject the bundle.
 
 A proposal that is not yet settled does not travel in a bundle. It is
 the signed op and its `keys`, checked against the state at the head.
@@ -846,7 +929,11 @@ deployment matter and is not authority.
 Input: the group XID, a bundle, the verifier's stored head for that XID
 if any, the current time, and optionally a nonce and a grant body.
 Output: accept with state and head, pending, conflict, or reject with
-the failing evidence. Collection, discovery, and storage sit outside.
+the failing evidence. Unsupported is a reject whose reason is the
+sequence the verifier could not read. It is the one rejection that is
+about the group and that the verifier stores. Collection and discovery
+sit outside. The verifier's own record per XID is its highest head, a
+verified conflict, and an unsupported sequence.
 
 ## Map to the core governance contract
 

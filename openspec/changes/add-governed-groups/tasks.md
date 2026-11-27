@@ -27,7 +27,17 @@
 - [x] Add the standard to the table in `docs/standards/README.md`.
 - [x] Add a pointer from `docs/standards/identikey-keyspace-v1.md` §12 to the new standard. Keyspace v1 text otherwise stays as it is.
 - [x] Name fixture hooks in the standard: founding XID, each kind, quorum accept and reject, `majority` and `all`, role and key guard, lockout guard, acceptance present and missing, expiry, receipt, receipt time order, equivocation, exit receipt, head rollback, grant live / revoked / voided / kept, state digest mismatch, unknown mechanism, unknown threshold form, the sign digest against the content hash, co-signers, an unattributable signature, an elided entry, each reducer rejection, two receipts for one entry, the rule limit of 48, an anchor adoption, a stored freeze.
-- [ ] ASK: unsupported-entry rule. Found 2026-11-27 while writing the standard (§15, marked there as an open issue). The contract says a verifier that meets an entry it cannot implement stores "unsupported" for the group and keeps to it. It does not say what the verifier must have verified about that entry first. As written, anyone who can hand a verifier a bundle can stop that verifier for the group with a made-up entry. A freeze, by contrast, is stored only after two settlement records verify. Recommended: store the finding only when every check v1 can make passes, including a receipt under the admissible witness key and approvals that meet the prior `policy` rule; otherwise reject the evidence and store nothing. That is a contract change, so it needs the user's decision and a fresh advise by `astra-arch-review`.
+- [x] Preparation amendments, 2026-11-27. Writing the standard and an independent conformance read of it found places where the accepted contract left an implementer guessing. Amended in `design.md`, the delta, and the standard together. The author proposed each one. None is a user decision yet.
+  - [x] P1 Unreadable entries. A verifier stores "unsupported" only for an established entry: well formed, signatures verify, the prior `policy` rule is met by old keys, and a receipt by the witness in office. Otherwise it rejects the evidence and stores nothing. Covers the anchor adoption, an unknown `visibility`, and the reading order. `design.md` "Unreadable entries"; delta requirement of the same subject.
+  - [x] P2 A head names an entry of the chain, a new action needs a head over the last entry, and a head that verifies is stored whatever its age. `design.md` "Head and freshness".
+  - [x] P3 A signature by an added key never counts toward a rule. `design.md` "Acceptance".
+  - [x] P4 An exit key equal to the witness key or a member key is rejected, and an exit receipt is admissible only when the state changes in the witness alone, so it keeps every grant. `design.md` "Exit witness".
+  - [x] P5 A valid key is a canonical encoding of a curve point. `design.md` "Signatures".
+  - [x] P6 A verifier that sent no nonce does not interpret one.
+  - [x] P7 A grant body is closed at the top level, version 1, canonical. No grant is live under a stored conflict or unsupported finding.
+  - [x] P8 A rival that fails is ignored. Unsupported is a reject that names the sequence.
+- [ ] Fresh advise after preparation
+- [ ] ASK: confirm P1 and P4. Both are the author's recommendation and both change who can do what. P1: a v1 verifier stops for good only when the `policy` quorum and the witness have both signed an entry it cannot read. The alternatives are a receipt alone, or never storing for an unknown kind. P4: the exit key can no longer settle a witness replacement that drops a grant.
 
 Out of scope, not owed here:
 
