@@ -59,8 +59,9 @@ never the group's signature.
 - **Hashes.** SHA-256, and unkeyed BLAKE3 with 32 bytes of output. Each
   use says which. These are hashes of public data, not key derivation
   ([`key-derivation.md`](key-derivation.md)).
-- **Lengths.** An XID, a key, a digest, and an entry hash are 32 bytes.
-  A signature is 64 bytes. A salt is 16 bytes. A nonce is 32 bytes.
+- **Lengths.** An XID, a digest, and an entry hash are 32 bytes. A key
+  in the default form is 32 bytes (§2.2). A signature is 64 bytes. A
+  salt is 16 bytes. A nonce is 32 bytes.
 
 ### 2.1 Ed25519 profile
 
@@ -86,6 +87,77 @@ way. This is the profile `forgejo-ci-owner-v1` names, made exact.
 
 No other signature algorithm is accepted in v1. An ML-DSA signature on
 an entry fails.
+
+### 2.2 Keys and defaults
+
+Every key in this standard is a `Key`: a member's approval key, the
+witness key, the exit key, and a key supplied in a bundle.
+
+```
+Key := bstr                          ; 32 bytes: an Ed25519 key
+     / { "alg": tstr, "key": bstr }  ; a key of any other algorithm
+```
+
+- **Default form.** A bare 32-byte string is an Ed25519 key. Ed25519 is
+  the default algorithm, and the default carries no tag. A group that
+  uses only the default writes the same bytes it would if this type
+  were a plain byte string.
+- **Tagged form.** The map names another algorithm. `alg` is a tag from
+  the registry in
+  [`identikey-auth-challenge-v1.md`](identikey-auth-challenge-v1.md)
+  §3.1, and `key` is the public key in the encoding §3.2 there gives
+  for that tag. The map is closed.
+- **One encoding per key.** An Ed25519 key is always bare. A map whose
+  `alg` is `ed25519` fails. A bare string that is not 32 bytes fails.
+- **Comparison.** Two keys are the same key when their dCBOR encodings
+  are the same bytes. Keys sort by their dCBOR encoding. For two keys
+  in the default form that is the order of their 32 bytes.
+
+Which algorithms a group accepts is fixed by its mechanisms (§5.3).
+`mech.auth` fixes it for member keys and entry signatures. `mech.settle`
+fixes it for the witness key, the exit key, receipts, and heads.
+
+`quorum-v1` and `witness-v1` accept the default form only. Under them a
+key in the tagged form is an invalid key wherever it appears, whatever
+its tag, and the entry that carries it is rejected like an entry with a
+malformed key. A v1 verifier never has to recognize a tag.
+
+Another algorithm arrives as a mechanism that accepts it. A group
+adopts that mechanism with a `group.policy` entry, signed by keys its
+current mechanism accepts. A verifier that lacks the mechanism finds
+that entry unreadable and stops there once it is established (§15). It
+does not go on to misread a key. A group may also be founded under such
+a mechanism, and a verifier that lacks it rejects the group (§5.3).
+
+A mechanism that accepts another algorithm states, for that algorithm:
+
+- how a signature on an entry is encoded in the `'signed'` assertion
+  (§4.3 gives the Ed25519 layout only), and how a receipt and a head
+  are encoded. A receipt or a head carries no tag: its algorithm is the
+  algorithm of the key that made it;
+- a validity and strictness profile as exact as §2.1;
+- its limits. Those in §5.4 are sized for Ed25519. An ML-DSA-65
+  signature is 3,309 bytes;
+- what `actor` carries. The log format fixes `actor` at 32 bytes
+  (§4.1), so for a longer key it is an identifier of the proposer's
+  key and not the key.
+
+The defaults of this standard, in one place:
+
+| Use | Default, and the only value v1 accepts | Written as | Fixed by |
+|---|---|---|---|
+| Member approval key | Ed25519 | bare 32 bytes | `mech.auth` |
+| Signature on an entry | Ed25519, strict (§2.1) | Gordian signature, variant 2 (§4.3) | `mech.auth` |
+| Witness key and exit key | Ed25519 | bare 32 bytes | `mech.settle` |
+| Receipt and head | Ed25519, strict (§2.1) | 64 raw bytes | `mech.settle` |
+| XID, state digest, grant digest | SHA-256 | 32 bytes | the `v1` in each domain label |
+| Entry hash | BLAKE3 | 32 bytes | log format version 4 |
+| What members sign | SHA-256, Gordian digest | 32 bytes | log format version 4 |
+
+Note. `identikey-auth` writes every key as the map, Ed25519 included,
+and fingerprints that map. This standard writes the default bare. The
+two are different encodings of one registry, and a key is never copied
+between them as bytes without re-encoding.
 
 ---
 
@@ -270,7 +342,7 @@ rejected by the rule above.
 
 ```
 Member  := { "xid": bstr,          ; 32 bytes
-             "keys": [+ bstr],     ; 32-byte Ed25519, the member's approval keys
+             "keys": [+ Key],      ; the member's approval keys (§2.2)
              "roles": [+ tstr] }
 
 Rule    := { "k": uint / "majority" / "all", "role": tstr }
@@ -281,8 +353,8 @@ Policy  := { "mech": { "auth": "quorum-v1",
                        "release": "none" },
              "rules": { "roster": Rule, "policy": Rule,
                         ? "delegate": Rule, ? "revoke": Rule },
-             "witness": { "key": bstr },   ; 32-byte Ed25519
-             ? "exit": bstr,               ; 32-byte Ed25519
+             "witness": { "key": Key },    ; §2.2
+             ? "exit": Key,                ; §2.2
              "visibility": "public" }
 
 State   := { "seq": uint, "roster": [Member], "policy": Policy,
@@ -327,17 +399,20 @@ For every body and for `State`:
 
 - Every map is closed. An unknown key at any depth fails.
 - Every array is sorted ascending and has no duplicate: `roster` and
-  `set` by `xid`; `keys`, `drop`, `grants`, and `keep` bytewise;
-  `roles` bytewise as UTF-8. dCBOR does not sort arrays, so this
-  standard does.
+  `set` by `xid`; `drop`, `grants`, and `keep` bytewise; `keys` by the
+  dCBOR encoding of each key (§2.2), which for default keys is
+  bytewise; `roles` bytewise as UTF-8. dCBOR does not sort arrays, so
+  this standard does.
 - The optional arrays are `set`, `drop`, and `keep`. One that would be
   empty is omitted, and a present empty one fails.
 - `roster`, `keys`, and `roles` are required and never empty.
 - `State.grants` is required and may be empty. It is `[]` at founding,
   after the last grant is revoked, and after a policy change that keeps
   none.
-- `xid`, `group`, a key, a grant digest, and `state` are 32 bytes. The
+- `xid`, `group`, a grant digest, and `state` are 32 bytes. The
   founding `salt` is 16 bytes.
+- A key is a `Key` (§2.2). Under `quorum-v1` and `witness-v1` it is in
+  the default form: a 32-byte string.
 - A role is 1 to 32 bytes from `a-z`, `0-9`, and `-`.
 - Integers are unsigned and fit in 64 bits.
 
@@ -353,6 +428,9 @@ exactly these values.
 | `mech.anchor` | `none` | reserved, §9.5 |
 | `mech.release` | `none` | no secret release |
 | `visibility` | `public` | the log is readable by anyone who has it |
+
+The mechanisms also fix the key and signature algorithms (§2.2). Both
+v1 mechanisms accept Ed25519 in the default form and nothing else.
 
 No other value is applied. A founding entry that names one is
 rejected with its group. A later entry that names one is unreadable
@@ -995,7 +1073,7 @@ exists.
 
 ```
 Settled      := { "op": bstr,             ; signed entry, §4.3
-                  "keys": [+ bstr],       ; one per signature, wire order
+                  "keys": [+ Key],        ; one per signature, wire order
                   "by": "witness" / "exit",
                   "time": uint,
                   "receipt": bstr }       ; 64 bytes
@@ -1219,6 +1297,9 @@ Each slot is one or more cases with an expected verdict.
 | `key-weak` | An added key that is a small-order point, and one that is not a point. Rejected. |
 | `key-non-canonical` | A witness key whose `y` is encoded as the field prime plus three. Rejected. |
 | `signature-ml-dsa` | An ML-DSA signature. Rejected. |
+| `key-tagged-form` | A member key, a witness key, an exit key, and a bundle key in the tagged form with `alg` `p256`. Each rejected under the v1 mechanisms. An Ed25519 key written as a map. Rejected. A bare key of 33 bytes. Rejected. |
+| `key-default-bytes` | A roster of default keys. Its bytes and its state digest are those of the same roster with each key read as a plain 32-byte string. |
+| `algorithm-adoption` | An established policy entry at sequence 5 that names another `auth` value and a tagged witness key. Unreadable, not malformed. Stops at 4, stored, nothing authorized. |
 | `entry-elided` | A signature assertion elided, and a content assertion elided. Rejected though signatures verify. |
 | `entry-shape` | A timestamp assertion, a second parent, a missing body, a non-canonical encoding. Each rejected. |
 | `kind-found` | A founding entry, accepted, with `State.grants` empty. |
@@ -1300,6 +1381,10 @@ Suggested path when filled: `docs/standards/vectors/group-v1/`.
 - A group XID document. Whether an XID document can be projected for an
   XID with no inception key is not yet verified.
 - A verifier crate
+- Any key or signature algorithm other than Ed25519, including P-256
+  for hardware-bound keys and ML-DSA. The `Key` form and the way a
+  group adopts another algorithm are defined (§2.2). No mechanism that
+  accepts one is.
 
 ---
 

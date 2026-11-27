@@ -224,9 +224,72 @@ The log crate's generic `verify` checks every signature against
 not call it. It reads the signatures and the digest and applies the
 rules above.
 
+### Keys and algorithms
+
+Decided by the user on 2026-11-27 (K1 in `tasks.md`): keys are
+self-describing, the default is called out, and the default is the
+cheap form.
+
+```
+Key := bstr                          ; 32 bytes: an Ed25519 key
+     / { "alg": tstr, "key": bstr }  ; a key of any other algorithm
+```
+
+Every key the standard names is a `Key`: a member's approval key, the
+witness key, the exit key, and a key supplied in a bundle.
+
+- A bare 32-byte string is an Ed25519 key. Ed25519 is the default and
+  carries no tag. A group of default keys has the bytes it had before
+  this amendment: no entry, state digest, or XID changes.
+- The map names another algorithm. `alg` is a tag from the registry in
+  `identikey-auth-challenge-v1.md` §3.1 (`p256`, `ml-dsa-44`,
+  `ml-dsa-65`, `ml-dsa-87` today), and `key` is the encoding §3.2 there
+  gives. The map is closed.
+- One key has one encoding. An Ed25519 key is always bare. A map whose
+  `alg` is `ed25519` fails. A bare string that is not 32 bytes fails.
+- Two keys are the same key when their dCBOR encodings are equal. Keys
+  sort by that encoding, which for default keys is the order of their
+  bytes.
+
+Which algorithms a group accepts belongs to its mechanisms. `mech.auth`
+fixes it for member keys and entry signatures, and `mech.settle` for the
+witness key, the exit key, receipts, and heads. `quorum-v1` and
+`witness-v1` accept the default form only. Under them a tagged key is
+an invalid key wherever it appears, and its entry is rejected. A v1
+verifier never has to recognize a tag.
+
+Another algorithm arrives as a mechanism that accepts it, adopted by a
+`group.policy` entry that keys of the current mechanism sign. A v1
+verifier finds that entry unreadable and, once it is established, stops
+for good ("Unreadable entries"). This is why no new mechanism slot and
+no change to the unreadable rule is needed: the existing fail-closed
+path already carries the upgrade. Such a mechanism states the signature
+encoding, a strictness profile as exact as the Ed25519 one, its limits
+(the present ones are sized for Ed25519), and what `Op.actor` carries,
+since the log format fixes that field at 32 bytes.
+
+Why this shape and not the alternatives:
+
+- Always the map, as `identikey-auth` writes keys. Rejected: 17 more
+  bytes per key and a changed wire for the default, for no gain a v1
+  verifier can use.
+- A bare string now and a new body shape later. That also works, since
+  a later mechanism can redefine a body a v1 verifier does not read.
+  Rejected: it forks the roster and state types between mechanisms, and
+  it leaves the next implementer to invent the tagged form.
+- Accept P-256 in v1. Not done here. It needs an ECDSA strictness
+  profile, a signature layout that Gordian's signature type does not
+  have, and support in the log crate. It is the first mechanism this
+  amendment is meant to make room for.
+
+What this amendment does not give: a v1 verifier still verifies only
+Ed25519. A hardware-bound P-256 approval key needs the later mechanism.
+The amendment fixes the form that key will take and the way a group
+moves to it.
+
 ```
 Member  := { "xid": bstr,          ; 32 bytes
-             "keys": [+ bstr],     ; 32-byte Ed25519, the member's approval keys
+             "keys": [+ Key],      ; the member's approval keys
              "roles": [+ tstr] }
 
 Rule    := { "k": uint / "majority" / "all", "role": tstr }
@@ -237,8 +300,8 @@ Policy  := { "mech": { "auth": "quorum-v1",
                        "release": "none" },
              "rules": { "roster": Rule, "policy": Rule,
                         ? "delegate": Rule, ? "revoke": Rule },
-             "witness": { "key": bstr },   ; 32-byte Ed25519
-             ? "exit": bstr,               ; 32-byte Ed25519
+             "witness": { "key": Key },
+             ? "exit": Key,
              "visibility": "public" }
 
 State   := { "seq": uint, "roster": [Member], "policy": Policy,
@@ -302,15 +365,18 @@ Shape rules, for every body and for `State`:
 
 - Every map is closed. An unknown key at any depth fails.
 - Every array is sorted ascending and has no duplicate: `roster` and
-  `set` by `xid`; `keys`, `drop`, `grants`, and `keep` bytewise; `roles`
-  bytewise as UTF-8. dCBOR does not sort arrays, so this standard does.
+  `set` by `xid`; `drop`, `grants`, and `keep` bytewise; `keys` by the
+  dCBOR encoding of each key, which for default keys is bytewise;
+  `roles` bytewise as UTF-8. dCBOR does not sort arrays, so this
+  standard does.
 - The optional arrays are `set`, `drop`, and `keep`. One that would be
   empty is omitted, and a present empty one fails. `roster`, `keys`,
   and `roles` are required and never empty. `State.grants` is required
   and may be empty: it is `[]` at founding, after the last grant is
   revoked, and after a policy change that keeps none.
-- `xid`, `group`, a key, a grant digest, and `state` are 32 bytes. The
-  founding `salt` is 16 bytes.
+- `xid`, `group`, a grant digest, and `state` are 32 bytes. The
+  founding `salt` is 16 bytes. A key is a `Key`, which under the v1
+  mechanisms is a 32-byte string.
 - A role is 1 to 32 bytes from `a-z`, `0-9`, and `-`.
 - Integers are unsigned and fit in 64 bits.
 - `group` is the XID. `seq` is the prior `seq` plus one.
@@ -911,7 +977,7 @@ does not.
 
 ```
 Settled      := { "op": bstr,             ; signed envelope
-                  "keys": [+ bstr],       ; one per signature, wire order
+                  "keys": [+ Key],        ; one per signature, wire order
                   "by": "witness" / "exit",
                   "time": uint,
                   "receipt": bstr }

@@ -45,6 +45,13 @@
     optional: a single canonical store to check for the truth. The
     path to it is paved now (`mech.anchor`, `none` in v1).
 
+- 2026-11-27, user: keys are self-describing, for algorithm agility.
+  Hardware and enclaves sign with P-256, and post-quantum keys must
+  stay possible. The default (Ed25519) is called out and is the cheap
+  form. v1 still accepts Ed25519 only. Recorded as K1 in `tasks.md`.
+  The form `Key := bstr / { "alg", "key" }`, with the default bare, is
+  the author's reading of "cheaper to use the default".
+
 ## Auto-logged
 
 - Spec path `docs/standards/identikey-group-v1.md`. Capability

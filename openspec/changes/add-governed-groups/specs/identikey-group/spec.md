@@ -110,8 +110,8 @@ sequence.
 - THEN it treats the entry as unreadable, not as malformed, and stops at the predecessor
 
 ### Requirement: Roster principals are member XIDs
-A roster entry SHALL name a member XID, one or more 32-byte Ed25519
-approval keys, and one or more roles. A key SHALL appear under at most
+A roster entry SHALL name a member XID, one or more approval keys, and
+one or more roles. A key SHALL appear under at most
 one member. A member key SHALL NOT equal the witness key or the exit
 key. Approvals SHALL be counted per member XID, not per key. The log
 SHALL be verifiable without resolving any member's own XID document.
@@ -136,7 +136,8 @@ A member signature SHALL be a strict Ed25519 signature over the 32-byte
 SHA-256 Gordian digest of the entry's wrapped unsigned envelope. It
 SHALL NOT be a signature over the entry's content hash. Every key this
 standard names, the witness key and the exit key included, SHALL be a
-valid, non-weak Ed25519 verification key. A key SHALL be valid only
+valid, non-weak Ed25519 verification key in the default form. A key
+SHALL be valid only
 when its 32 bytes are the canonical encoding of a curve point, with the
 `y` coordinate below the field prime and no sign bit on a zero `x`. A
 key SHALL be weak when the point has small order. An entry SHALL
@@ -186,6 +187,46 @@ No signature algorithm other than Ed25519 SHALL be accepted in v1.
 - GIVEN an entry that carries an ML-DSA signature
 - WHEN a v1 verifier checks it
 - THEN verification rejects it
+
+### Requirement: Keys are self-describing with an untagged default
+Every key this standard names SHALL be either a bare 32-byte string,
+which is an Ed25519 key, or a closed map of an algorithm tag `alg` and
+key bytes `key`. Ed25519 SHALL be the default and SHALL always be
+written bare. A map whose `alg` is `ed25519` SHALL fail, and a bare
+string that is not 32 bytes SHALL fail. Two keys SHALL be the same key
+only when their deterministic CBOR encodings are equal, and keys SHALL
+sort by that encoding. The algorithms a group accepts SHALL be fixed by
+its authorization mechanism for member keys and entry signatures, and
+by its settlement mechanism for the witness key, the exit key,
+receipts, and heads. `quorum-v1` and `witness-v1` SHALL accept the
+default form only, and under them a key in the map form SHALL be an
+invalid key whatever its tag. A group SHALL come to accept another
+algorithm only by adopting a mechanism that accepts it.
+
+#### Scenario: Default keys cost nothing
+- GIVEN a roster whose keys are all Ed25519
+- WHEN it is encoded
+- THEN each key is a bare 32-byte string, and the entry bytes, the state digest, and the XID are those of the same roster with plain byte-string keys
+
+#### Scenario: Tagged key under the v1 mechanisms
+- GIVEN a `group.roster` entry under `quorum-v1` that adds a key in the map form with `alg` `p256`
+- WHEN a v1 verifier reads it
+- THEN it rejects the entry as invalid, and stores nothing about the group
+
+#### Scenario: Ed25519 written as a map
+- GIVEN an entry that lists a key as a map whose `alg` is `ed25519`
+- WHEN a verifier reads it
+- THEN it rejects the entry
+
+#### Scenario: Tagged witness key
+- GIVEN a founding entry under `witness-v1` whose witness key is in the map form
+- WHEN a v1 verifier reads it
+- THEN it rejects the group
+
+#### Scenario: A group adopts another algorithm
+- GIVEN a group whose sequence 5 entry is a `group.policy` entry that names an authorization mechanism other than `quorum-v1`, is signed by default keys that meet the `policy` rule, and has a receipt by the witness in office
+- WHEN a v1 verifier replays the log
+- THEN it finds the entry unreadable and not malformed, stops at sequence 4, stores the finding, and authorizes no new action for that group
 
 ### Requirement: Quorum authorization per action
 The policy SHALL name a rule of the form `k` of `role` for `roster` and
