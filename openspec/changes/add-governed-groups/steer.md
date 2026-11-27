@@ -52,6 +52,26 @@
   The form `Key := bstr / { "alg", "key" }`, with the default bare, is
   the author's reading of "cheaper to use the default".
 
+- 2026-11-27, user, confirming two author proposals (P1 and P4 in
+  `tasks.md`):
+  - A verifier stores an unsupported finding only for an unreadable
+    entry that the prior `policy` quorum approved and the witness in
+    office settled. The alternatives were a receipt alone, or never
+    storing for an unknown kind.
+  - An exit receipt is admissible only when the entry changes the
+    witness and nothing else in the state, so it keeps every grant.
+    The user's words: the exit receipt allows exit only, "a singular
+    action".
+- 2026-11-27, user, direction for the next step after this change
+  lands: the exit key is the first key in a group that the members
+  hold themselves and no trusted party holds. That becomes the default
+  for anything a group does not want a witness to have authority over.
+  It has to be rotated and handed out again as membership changes, and
+  a quorum over it is wanted. The user asked for an outline of the
+  steps from one shared key toward that, along three lines: security,
+  convenience and recoverability against self-custody, and single
+  against group decisions. Not designed in this change.
+
 ## Auto-logged
 
 - Spec path `docs/standards/identikey-group-v1.md`. Capability
@@ -61,15 +81,6 @@
 - Shared keys and secret release are a later change.
 
 ## Skipped / still open
-
-- Proposed by the author on 2026-11-27 and not yet confirmed by the
-  user. Both are in the contract as written, pending that word:
-  - A verifier stores an unsupported finding only for an unreadable
-    entry that the prior `policy` quorum approved and the witness in
-    office settled. Alternatives: a receipt alone is enough, or an
-    unknown kind is never stored.
-  - An exit receipt is admissible only when the entry changes the
-    witness and nothing else in the state, so it keeps every grant.
 
 - FROST, Registry settlement, private logs, groups as members.
 - Group-scoped member identifiers (NAOMS writes a per-hive pseudonym,

@@ -875,6 +875,13 @@ Two different witness replacements at one sequence, each with an exit
 receipt, are also two settlement records and freeze the group. The exit
 key is held by the owners, so that is the owners' own fault.
 
+Note. The exit key is one key in v1, and this standard does not say
+how the owners hold or share it. Replacing it is an ordinary
+`group.policy` entry, settled by the witness in office. The exit path
+cannot replace it. A person who has left the group and still holds the
+exit key can settle only a witness replacement that the `policy` rule
+approved.
+
 Advice to tooling: say at founding that a group without `exit` depends
 on its witness to leave its witness. Show an owner any approved,
 unsettled entry at the current sequence before the owner approves an
@@ -1299,7 +1306,7 @@ Each slot is one or more cases with an expected verdict.
 | `signature-ml-dsa` | An ML-DSA signature. Rejected. |
 | `key-tagged-form` | A member key, a witness key, an exit key, and a bundle key in the tagged form with `alg` `p256`. Each rejected under the v1 mechanisms. An Ed25519 key written as a map. Rejected. A bare key of 33 bytes. Rejected. |
 | `key-default-bytes` | A roster of default keys. Its bytes and its state digest are those of the same roster with each key read as a plain 32-byte string. |
-| `algorithm-adoption` | An established policy entry at sequence 5 that names another `auth` value and a tagged witness key. Unreadable, not malformed. Stops at 4, stored, nothing authorized. |
+| `algorithm-adoption` | An established policy entry at sequence 5 that names another `auth` value and a tagged witness key. Unreadable, not malformed. Stops at 4, stored, nothing authorized. The same entry without the outgoing witness's receipt, and with a signature in a later layout attached. Neither is established, and nothing is stored. |
 | `entry-elided` | A signature assertion elided, and a content assertion elided. Rejected though signatures verify. |
 | `entry-shape` | A timestamp assertion, a second parent, a missing body, a non-canonical encoding. Each rejected. |
 | `kind-found` | A founding entry, accepted, with `State.grants` empty. |

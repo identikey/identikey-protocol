@@ -229,6 +229,10 @@ Known answer, with `dh` = 32 bytes of `0x11`, `ephemeral` all `0x22`,
 | `x25519-xchacha20poly1305` | `ad799ab492b0d6c54e41260bd866c433f0f3072b0b7fa3a77cca58c6731c8d76` |
 | `p256-xchacha20poly1305` | `1a3284a25b59ec9365ad2f52906b624dc16e77e91f8623b8df38e795070f4ad4` |
 
+Both values were reproduced on 2026-11-27 with a second BLAKE3
+implementation, written separately from the `blake3` crate that
+produced them.
+
 Changed 2026-11-27, before any release. Until then `k` was a plain
 BLAKE3 hash of the label `identikey-keyspace-v1-wrap` and the same three
 inputs. A wrap sealed under the earlier construction does not open.

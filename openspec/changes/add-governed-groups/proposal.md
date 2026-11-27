@@ -33,7 +33,9 @@ and the user's word on P1 and P4.
 The fifth advise passed seven of the eight and sent back one (V1, the
 founding exception to the added-key rule). The sixth accepted the
 amended contract at `ae8f829` (`reviews/2026-11-27-advise-6.md`). The
-user's word on P1 and P4 is still owed.
+seventh accepted the key form (K1) at `b13bafc`
+(`reviews/2026-11-27-advise-7.md`). The user confirmed P1 and P4 on
+2026-11-27, both as written. Nothing is owed on this change.
 
 Preparation 2026-11-26: revised. Inputs are the user's two decisions
 (founding-entry XID, Forgejo profile reissued as a grant scope) and the
