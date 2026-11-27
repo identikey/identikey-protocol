@@ -1,5 +1,9 @@
 # Learnings
 
+- 2026-11-27: An accepted contract still had holes. Writing `docs/standards/identikey-group-v1.md` and reading it for conformance found eight places where the advise-accepted `add-governed-groups` contract left an implementer guessing or open to attack (P1 to P8 in that change's `tasks.md`). The worst let anyone who could hand a verifier a bundle stop it for a group. Write the standard before trusting the accept.
+- 2026-11-27: `identikey_log`'s generic `verify` checks every signature against `actor`, so it rejects every co-signed op, and it panics when `actor` is 32 bytes that are not a curve point (bead `ikp-o70`, `docs/spikes/add-governed-groups-h1/finding.md`). A group verifier checks signatures itself and validates each key before use.
+- 2026-11-27: A rule written for later entries, "a signature by an added key never counts toward a rule", contradicted the founding entry, where every key is added. It held only once the founding exception was stated (V1, `openspec/changes/archive/2026-11-27-add-governed-groups/reviews/2026-11-27-advise-5.md`).
+
 - 2026-10-26: One stable WebAuthn user handle per holder per party host. A second create in the same vault may replace that authenticator's discoverable credential rather than keep two. A different authenticator can still hold another credential for the same handle (`docs/standards/identikey-party-v1.md`).
 - 2026-10-25: 1Password files passkeys by WebAuthn relying party hostname. `alice.localhost` and `bob.localhost` were two websites. A second `credentials.create` on the same host, with the same `user.name`, saved another passkey that cannot be told apart from the first. A port is not part of `rp.id` (`docs/standards/identikey-party-v1.md`, commit `e81dfd7`).
 - 2026-09-01: This repo's spec surface is `docs/standards/`, not `openspec/specs/`. Folding a change archives it under `openspec/changes/archive/` and leaves the living spec in `docs/standards/`.
