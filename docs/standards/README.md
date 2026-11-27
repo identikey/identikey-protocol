@@ -18,6 +18,7 @@ can safely reimplement.
 | [`identikey-auth-platform-backends.md`](identikey-auth-platform-backends.md) | Engineering notes for `Signer` backends against hardware key stores (Secure Enclave, TPM 2.0) | [`identikey-auth`](../../crates/identikey-auth) |
 | [`wallet-envelope-format.md`](wallet-envelope-format.md) | The `IKEYW` wallet container: Gordian Envelope layout, encryption shell, unknown-assertion preservation | [`identikey-wallet`](../../crates/identikey-wallet) |
 | [`dcbor-determinism.md`](dcbor-determinism.md) | The byte-identical serialization contract every envelope above depends on | all of the above |
+| [`key-derivation.md`](key-derivation.md) | Convention for new work: derive keys with BLAKE3 `derive_key` and a hardcoded context string. Lists the existing derivations that stay as they are. | new constructions in every crate |
 | [`encoding-conventions.md`](encoding-conventions.md) | Where bytes cross text boundaries: raw-in-CBOR, `ur:` for whole envelopes, base58/base64 by size for single values | all consumers, incl. Recrypt and Dreamball |
 
 Moved here from the recrypt repo on 2026-08-07, where they had been left
