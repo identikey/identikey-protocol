@@ -409,3 +409,7 @@ Suggested path when filled: `docs/standards/vectors/keyspace-v1/`.
   [`identikey-share-v1.md`](identikey-share-v1.md). That crate does not author
   `keyspace.*` ops.
 - Lightning Admin UI
+- A governed group: an identity of its own, quorum governance, a
+  witness, and delegation. That is
+  [`identikey-group-v1.md`](identikey-group-v1.md). A group is not a
+  keyspace and does not change these bytes.
