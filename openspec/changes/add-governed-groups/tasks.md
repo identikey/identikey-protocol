@@ -39,7 +39,7 @@
 - [x] Fresh advise after preparation
 - [x] V1 from `reviews/2026-11-27-advise-5.md`: make founding an explicit exception to the added-key approval exclusion in design "Acceptance" and delta "Every key signs the entry that adds it"; reconcile founding quorum text and a successful founding scenario. Blocking normative contradiction; return to `astra-arch-review` after amendment.
 - [x] K1 Self-describing keys with an untagged default. Decided by the user on 2026-11-27, after a review of hardware and enclave constraints: a hardware-bound approval key is P-256, and the contract took bare Ed25519 keys only. Every key is a `Key`: a bare 32-byte string for Ed25519, the default, or a closed `{ "alg", "key" }` map for any other algorithm. The v1 mechanisms accept the default form only, so no v1 byte changes. Another algorithm arrives as a mechanism, adopted through the existing unreadable-entry path. Amended in `design.md` "Keys and algorithms", the delta requirement "Keys are self-describing with an untagged default", and the standard §2.2, §5, §5.2, §5.3, §13, §17, §18.
-- [ ] Fresh advise after preparation (K1). Same reader, `astra-arch-review`.
+- [x] Fresh advise after preparation (K1). Same reader, `astra-arch-review`.
 - [ ] ASK: confirm P1 and P4. Both are the author's recommendation and both change who can do what. P1: a v1 verifier stops for good only when the `policy` quorum and the witness have both signed an entry it cannot read. The alternatives are a receipt alone, or never storing for an unknown kind. P4: the exit key can no longer settle a witness replacement that drops a grant.
 
 Out of scope, not owed here:
