@@ -1,11 +1,23 @@
 # add-governed-groups
 
-> **PENDING**
+> **ACTIVE BUILD**
 
 **Rigor:** architecture
 
 Steer residue is `steer.md` in this change (2026-11-26). Protocol blast.
-Advise is owed before act. Nothing here is activated.
+Activated 2026-11-27 by the user ("kick off the spike and write it up"),
+after the advise accept in `reviews/2026-11-26-advise-4.md`. The grant
+covers spike H1 and the owed work in `tasks.md`. It does not cover the
+out-of-scope list there.
+
+Preparation 2026-11-27: still valid. The accepted contract is `9252484`
+and nothing in `design.md` or the delta changed after it except the H1
+result. Two commits landed since: `d9121ae` (the key derivation
+convention) and `16b06a1` (the keyspace wrap key). The convention says
+the digests in `identikey-group` are hashes of public data and are not
+key derivation, so the SHA-256 labels here stand. Spike H1 is go
+(`docs/spikes/add-governed-groups-h1/finding.md`). It found no reason
+to change the contract, so no fresh advise is owed.
 
 Preparation 2026-11-26: revised. Inputs are the user's two decisions
 (founding-entry XID, Forgejo profile reissued as a grant scope) and the
@@ -19,8 +31,8 @@ statements that claimed more than the design gives
 for all five without a change of design. A third advise resolved four
 of them and sent back one (`reviews/2026-11-26-advise-3.md`, T1: the
 verifier-clock assumption behind the staleness bound). That is now
-stated. A fresh advise by the same reader is owed. Authority: the user asked for
-change, then architecture review. No activation was given.
+stated. The fourth advise accepted it
+(`reviews/2026-11-26-advise-4.md`).
 
 ## Why
 

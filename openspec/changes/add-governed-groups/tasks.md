@@ -3,7 +3,7 @@
 - [x] Human decision: group XID derived from the founding entry, or the ADR-013 inception key with a binding proof. Decided 2026-11-26: founding entry. Recorded in `steer.md`.
 - [x] Human decision: reissue `forgejo-ci-owner-v1` as a grant scope, or keep its own transcript. Decided 2026-11-26: reissue. Recorded in `steer.md`.
 - [x] Advise on this change (protocol blast). Accepted in `reviews/2026-11-26-advise-4.md` by `astra-arch-review` at `9252484`, after three send-backs. Accept before act. The reader checks the reading of ADR-013 decision 4 in `design.md`, "Head and freshness", and the five NAOMS-derived rules listed in `steer.md` under "Decided".
-- [ ] Send-back `reviews/2026-11-26-advise.md` (reader `astra-arch-review`). Each item is owed before a fresh advise by the same reader:
+- [x] Send-back `reviews/2026-11-26-advise.md` (reader `astra-arch-review`). Each item is owed before a fresh advise by the same reader:
   - [x] R1 Ordered consumption for a durable binding. Decided: narrow to bounded-staleness delegation. `design.md` "What a head does not give"; delta "A grant is delegation under bounded staleness".
   - [x] R2 Policy replacement and the per-rule protection. Decided: the `policy` rule is the root. `design.md` "The policy rule is the root"; delta of the same name.
   - [x] R3 Acceptance when a policy change makes a role governing. Decided: every key signs the entry that adds it. `design.md` "Acceptance"; delta "Every key signs the entry that adds it".
@@ -22,7 +22,7 @@
 - [x] Send-back `reviews/2026-11-26-advise-3.md` (same reader). One item:
   - [x] T1 The clock assumption behind the staleness bound, and computed age against real time. `design.md` "The clock assumption"; delta "A grant is delegation under bounded staleness".
 - [x] Fresh advise after preparation
-- [ ] Spike H1: co-sign one `identikey-log` op with two non-actor keys and verify each. Record the result in `design.md`.
+- [x] Spike H1: co-sign one `identikey-log` op with two non-actor keys and verify each. Record the result in `design.md`. Go, 2026-11-27: `crates/identikey-log/tests/cosign.rs` and `docs/spikes/add-governed-groups-h1/finding.md`.
 - [ ] Write `docs/standards/identikey-group-v1.md` from this change's design and delta. Copy the domain labels, the body maps, and the fixed limits. Spell out the op's core map, the Gordian leaf and wrapper digest construction, the signature tag and layout, and the assertion digest order, or pin the format they come from. A Rust function name is not portable documentation.
 - [ ] Add the standard to the table in `docs/standards/README.md`.
 - [ ] Add a pointer from `docs/standards/identikey-keyspace-v1.md` §12 to the new standard. Keyspace v1 text otherwise stays as it is.

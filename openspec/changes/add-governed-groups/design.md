@@ -982,12 +982,23 @@ the anchor reserved as the optional stronger level.
   without changing the crate. `counter_sign` attaches signatures by
   keys other than `Op.actor` over the same `sign_digest`, `signatures_of`
   returns them in wire order, each verifies strictly under its own key,
-  and the generic `verify` rejects the co-signed op. Confidence: high
-  (source read, behavior not run). Verification: a test in
-  `crates/identikey-log` that co-signs with two non-actor keys, checks
-  each against `sign_digest`, confirms that `entry_hash` is a different
-  value, and confirms that an elided entry is detectable. Synthesis:
-  record the result here.
+  and the generic `verify` rejects the co-signed op. Verification: a
+  test in `crates/identikey-log` that co-signs with two non-actor keys,
+  checks each against `sign_digest`, confirms that `entry_hash` is a
+  different value, and confirms that an elided entry is detectable.
+  - Spike: H1 go (2026-11-27). confidence: high. verification:
+    empirically-tested. spike-artifact:
+    `crates/identikey-log/tests/cosign.rs`, 11 tests, with the write-up
+    in `docs/spikes/add-governed-groups-h1/finding.md`.
+  - Every part of the claim holds, and the library code is unchanged.
+    The crate gained one test-only dependency, `ed25519-dalek`.
+  - The signed bytes were recomputed by hand and match: for an entry
+    with no assertion, `sign_digest` is SHA-256 of SHA-256 of the core
+    map's dCBOR.
+  - One build constraint, no contract change: `bc-components` panics on
+    a key that is not a curve point, so the group verifier screens keys
+    and verifies with `ed25519-dalek` itself. The contract already
+    requires valid, non-weak keys.
 - **H2.** Claim: a `bc-xid` `XIDDocument` can be built for an XID that
   has no inception key in the document, so a group XID can be served by
   existing resolvers as a projection. Confidence: medium. Verification:

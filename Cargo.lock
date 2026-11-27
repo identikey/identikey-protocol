@@ -1259,6 +1259,7 @@ dependencies = [
  "bc-envelope",
  "blake3",
  "dcbor",
+ "ed25519-dalek",
  "fips204",
  "getrandom 0.2.17",
  "getrandom 0.3.4",

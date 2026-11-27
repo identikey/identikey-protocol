@@ -110,3 +110,9 @@ default = []
 #   * ML-DSA-87 *verification*: NOT lost. `sign::verify_ml_dsa_87` is fips204
 #     and is always compiled.
 pqcrypto = ["bc-envelope/pqcrypto", "bc-components/pqcrypto"]
+
+[dev-dependencies]
+# The group verifier profile checks Ed25519 itself: strict verification and a
+# weak-key screen, with a key that may not be a valid point. `tests/cosign.rs`
+# exercises that path next to this crate's own.
+ed25519-dalek = { workspace = true }
