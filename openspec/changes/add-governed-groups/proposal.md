@@ -30,6 +30,11 @@ delta, and the standard together. The accept at `9252484` does not
 cover the amended contract. A fresh advise by the same reader is owed,
 and the user's word on P1 and P4.
 
+The fifth advise passed seven of the eight and sent back one (V1, the
+founding exception to the added-key rule). The sixth accepted the
+amended contract at `ae8f829` (`reviews/2026-11-27-advise-6.md`). The
+user's word on P1 and P4 is still owed.
+
 Preparation 2026-11-26: revised. Inputs are the user's two decisions
 (founding-entry XID, Forgejo profile reissued as a grant scope) and the
 NAOMS hive read, both recorded in `steer.md`. The contract at `d3f4a01`

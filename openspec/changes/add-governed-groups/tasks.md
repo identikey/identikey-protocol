@@ -36,7 +36,7 @@
   - [x] P6 A verifier that sent no nonce does not interpret one.
   - [x] P7 A grant body is closed at the top level, version 1, canonical. No grant is live under a stored conflict or unsupported finding.
   - [x] P8 A rival that fails is ignored. Unsupported is a reject that names the sequence.
-- [ ] Fresh advise after preparation
+- [x] Fresh advise after preparation
 - [x] V1 from `reviews/2026-11-27-advise-5.md`: make founding an explicit exception to the added-key approval exclusion in design "Acceptance" and delta "Every key signs the entry that adds it"; reconcile founding quorum text and a successful founding scenario. Blocking normative contradiction; return to `astra-arch-review` after amendment.
 - [ ] ASK: confirm P1 and P4. Both are the author's recommendation and both change who can do what. P1: a v1 verifier stops for good only when the `policy` quorum and the witness have both signed an entry it cannot read. The alternatives are a receipt alone, or never storing for an unknown kind. P4: the exit key can no longer settle a witness replacement that drops a grant.
 
