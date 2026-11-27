@@ -45,12 +45,20 @@ fn raw(sig: &Signature) -> [u8; 64] {
     }
 }
 
+/// A key the group standard accepts: the canonical encoding of a curve point
+/// that is not of small order. `from_bytes` alone decodes a `y` at or above
+/// the field prime, so the decoded point is re-encoded and compared.
+fn valid_key(bytes: &Hash32) -> Option<VerifyingKey> {
+    let key = VerifyingKey::from_bytes(bytes).ok()?;
+    if key.is_weak() || key.to_edwards().compress().to_bytes() != *bytes {
+        return None;
+    }
+    Some(key)
+}
+
 /// Strict Ed25519 under one key, the way a group verifier checks it.
 fn verifies_under(key: &Hash32, digest: &[u8; 32], sig: &Signature) -> bool {
-    let Ok(key) = VerifyingKey::from_bytes(key) else { return false };
-    if key.is_weak() {
-        return false;
-    }
+    let Some(key) = valid_key(key) else { return false };
     key.verify_strict(digest, &DalekSignature::from_bytes(&raw(sig))).is_ok()
 }
 
@@ -316,7 +324,7 @@ fn an_elided_inner_assertion_is_visible_and_moves_the_entry_hash() {
 }
 
 #[test]
-fn a_key_that_is_not_a_valid_point_or_is_weak_never_verifies() {
+fn a_key_that_is_not_a_point_is_weak_or_is_non_canonical_never_verifies() {
     let (op, signed) = co_signed();
     let digest = sign_digest(&op);
 
@@ -330,8 +338,22 @@ fn a_key_that_is_not_a_valid_point_or_is_weak_never_verifies() {
     identity[0] = 1;
     assert!(VerifyingKey::from_bytes(&identity).unwrap().is_weak());
 
+    // The field prime plus three, little-endian. The library decodes it to
+    // the point with y = 3, which is not weak. It is not a canonical key.
+    let mut non_canonical = [0xffu8; 32];
+    non_canonical[0] = 0xf0;
+    non_canonical[31] = 0x7f;
+    let decoded = VerifyingKey::from_bytes(&non_canonical).expect("the library decodes it");
+    assert!(!decoded.is_weak());
+    assert_ne!(decoded.to_edwards().compress().to_bytes(), non_canonical);
+    assert!(valid_key(&non_canonical).is_none());
+
+    for key in [proposer().actor(), member_a().actor(), member_b().actor()] {
+        assert!(valid_key(&key).is_some());
+    }
     for sig in &signed.signatures {
         assert!(!verifies_under(&not_a_point, &digest, sig));
         assert!(!verifies_under(&identity, &digest, sig));
+        assert!(!verifies_under(&non_canonical, &digest, sig));
     }
 }

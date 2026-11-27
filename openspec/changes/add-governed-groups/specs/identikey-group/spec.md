@@ -197,7 +197,9 @@ approved only when valid signatures over that entry come from keys of
 at least that many distinct members holding `role` in the state before
 the entry. The proposer SHALL be a member. An action with no rule SHALL
 be unavailable. The founding entry SHALL meet its own `policy` rule against
-its own roster.
+its own roster. For the founding entry, and for no other, a member of
+its roster SHALL count once toward that rule when the member holds the
+rule's role in that roster, every key of the roster having signed.
 
 #### Scenario: Two of three owners
 - GIVEN a `policy` rule of 2 of `owner` and three owners
@@ -224,6 +226,16 @@ its own roster.
 - GIVEN a `policy` rule of `all` of `owner` and four owners
 - WHEN three owners sign a `group.policy` entry
 - THEN the entry is not approved
+
+#### Scenario: Founding by one owner
+- GIVEN a founding entry that lists one member with one key and the role `owner`, with every rule set to 1 of `owner`
+- WHEN that key has signed it
+- THEN the founding entry is approved, and that member counts toward its `policy` rule
+
+#### Scenario: Founding by three owners
+- GIVEN a founding entry that lists three owners with one key each and a `policy` rule of 2 of `owner`
+- WHEN all three keys have signed it
+- THEN the founding entry is approved
 
 #### Scenario: Founding without its quorum
 - GIVEN a founding entry whose `policy` rule is 2 of `owner`
@@ -327,9 +339,11 @@ the roster after the entry that are not old keys. For the founding
 entry every key SHALL be an added key. Every added key SHALL sign its
 entry, whatever roles its member holds. A member who gains a role in a `group.roster` entry
 SHALL sign that entry with at least one of that member's keys, old or
-added. A signature by an added key SHALL NOT count toward any rule. A
-signature SHALL count toward a rule only when it is by an old key and
-its member held the rule's role before the entry. A `group.policy` entry SHALL NOT require
+added. In an entry after the founding entry, a signature by an added
+key SHALL NOT count toward any rule, and a signature SHALL count toward
+a rule only when it is by an old key and its member held the rule's
+role before the entry. The founding entry SHALL be counted as "Quorum
+authorization per action" says. A `group.policy` entry SHALL NOT require
 a signature from members whose role it gives a new power.
 
 #### Scenario: Member named without consent

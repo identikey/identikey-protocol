@@ -215,6 +215,9 @@ Three values come from the unsigned envelope. They are different bytes.
   approval. It counts once per member, however many of that member's
   keys sign, toward each rule whose role the member held in that state.
 - A signature by a key the entry adds is an acceptance.
+- The founding entry has no state before it, so it has no old key and
+  these two rules do not apply to it. Its own counting rule is in
+  "Authorization", under the rule table.
 
 The log crate's generic `verify` checks every signature against
 `Op.actor`. It rejects any co-signed group entry. A group verifier does
@@ -401,10 +404,21 @@ Its signature counts like any other.
 
 An absent `delegate` or `revoke` rule makes that action unavailable.
 
-The founding entry is signed by every key in its roster (see
-"Acceptance"). That meets its own `policy` rule, and it is the
-incoming-control evidence ADR-013 asks for. A founder cannot name a
-member who has not agreed.
+The founding entry is counted by its own rule, because it has no
+state before it and every one of its keys is an added key. It is
+signed by every key in its roster (see "Acceptance"). A member of the
+founding roster counts once toward the entry's own `policy` rule when
+it holds that rule's role in the founding roster. Since every key has
+signed, the rule is met exactly when the lockout guard passes: the
+number needed is not greater than the number of holders. A founding
+entry with one owner, one key, and `policy: 1 of owner`, signed by that
+key, is approved. One whose `policy` rule is `2 of owner` with a single
+owner is rejected by the lockout guard. One that lists three members
+and carries the signatures of two is rejected for the missing
+signature.
+
+That is the incoming-control evidence ADR-013 asks for. A founder
+cannot name a member who has not agreed.
 
 ### The policy rule is the root
 
@@ -497,10 +511,11 @@ entry.
 Nobody is on the roster without agreeing to it, and no key is on the
 roster that has not signed. So no key ever counts toward a rule before
 it has been shown to work, whichever entry later makes its role matter.
-A signature by an added key is never an approval and never counts
-toward a rule, whatever roles its member held. Only a signature by an
-old key counts, and only toward rules whose role its member held before
-the entry. A member who gains a role may sign with an old key or with
+In an entry after the founding one, a signature by an added key is
+never an approval and never counts toward a rule, whatever roles its
+member held. Only a signature by an old key counts, and only toward
+rules whose role its member held before the entry. The founding entry
+is the one exception, and it is counted as "Authorization" says. A member who gains a role may sign with an old key or with
 an added one. Signed with an old key, that one signature is the
 member's consent and also its approval for the roles it already held.
 
@@ -915,7 +930,10 @@ same sequence. A verifier checks a rival exactly as it checks a chain
 entry, against the state at that sequence's predecessor. A rival that
 verifies is a second settlement record there. A rival that fails any
 check, or that is the chain's own entry at that sequence, is ignored.
-It does not reject the bundle.
+It does not reject the bundle. An unreadable rival is not checked this
+way. It gets the checks of "Unreadable entries", and when it is
+established the verifier reports unsupported and stores it. That is
+not a conflict, because the verifier has not validated the entry.
 
 A proposal that is not yet settled does not travel in a bundle. It is
 the signed op and its `keys`, checked against the state at the head.

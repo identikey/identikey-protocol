@@ -29,7 +29,7 @@ API are untouched.
 | Decode then re-encode reproduces the bytes | Holds for an entry with no elision. | same test |
 | An unattributable signature is detectable | Holds. The codec carries a stranger's signature. Attribution against the candidate keys finds none for it. | `a_signature_by_a_key_outside_the_candidates_is_unattributable` |
 | An elided entry is detectable | Holds twice over: `elided` is non-zero, and re-encoding does not reproduce the bytes. | `an_elided_signature_is_visible_to_the_decoder`, `an_elided_inner_assertion_is_visible_and_moves_the_entry_hash` |
-| Verification is strict | Holds. The verifier's own path is `ed25519-dalek` `verify_strict` with a weak-key check. `bc-crypto` 0.14.0 also uses `verify_strict`. | `a_key_that_is_not_a_valid_point_or_is_weak_never_verifies` |
+| Verification is strict | Holds. The verifier's own path is `ed25519-dalek` `verify_strict` with a weak-key check. `bc-crypto` 0.14.0 also uses `verify_strict`. | `a_key_that_is_not_a_point_is_weak_or_is_non_canonical_never_verifies` |
 
 ## The bytes
 

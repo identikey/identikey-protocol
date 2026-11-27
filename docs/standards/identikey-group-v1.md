@@ -247,12 +247,15 @@ If any of these fails, the entry as presented is rejected. A signature
 by a key outside the candidate keys is not skipped. That verdict is
 about the evidence. It says nothing about the group.
 
-A signature by an old key is an **approval**. It counts once per
-member, however many of that member's keys sign, toward each rule whose
-role the member held in the state before the entry. A signature by an
-added key is never an approval and never counts toward a rule, whatever
-roles its member held. It shows that the key works and that its holder
-consents (§8.5). The founding entry is the one exception (§8.1).
+In an entry after the founding one, a signature by an old key is an
+**approval**. It counts once per member, however many of that member's
+keys sign, toward each rule whose role the member held in the state
+before the entry. A signature by an added key is never an approval and
+never counts toward a rule, whatever roles its member held. It shows
+that the key works and that its holder consents (§8.5).
+
+The founding entry has no old key. It is counted by its own rule
+(§8.1), and these two rules do not apply to it.
 
 Note. The `identikey-log` crate's generic `verify` checks every
 signature against `actor`, so it rejects every co-signed group entry. A
@@ -486,10 +489,22 @@ No failure falls back to a single administrator.
 
 ### 8.1 Founding
 
-The founding entry is signed by every key in its roster (§8.5). For it,
-those signatures count as its members' approvals, and it meets its own
-`policy` rule against its own roster. A founder cannot name a member
-who has not agreed.
+The founding entry has no state before it, and every one of its keys
+is an added key. It is counted by its own rule, and it is the only
+entry that is.
+
+- It is signed by every key in its roster (§8.5).
+- A member of the founding roster counts once toward the entry's own
+  `policy` rule when it holds that rule's role in the founding roster.
+- Since every key has signed, the rule is met exactly when the lockout
+  guard (§8.4) passes.
+
+A founding entry with one owner, one key, and `policy: 1 of owner`,
+signed by that key, is approved. One whose `policy` rule is
+`2 of owner` with a single owner is rejected by the lockout guard. One
+that lists three members and carries the signatures of two is rejected
+for the missing signature. A founder cannot name a member who has not
+agreed.
 
 ### 8.2 The policy rule is the root
 
@@ -1003,7 +1018,9 @@ at the same sequence. A verifier checks a rival exactly as it checks a
 chain entry, against the state at that sequence's predecessor. A rival
 that verifies is a second settlement record there. A rival that fails
 any check, or that is the chain's own entry at that sequence, is
-ignored. It does not reject the bundle.
+ignored. It does not reject the bundle. An unreadable rival is not
+checked this way. It gets the four checks of §15, and when it is
+established the verifier reports unsupported and stores it.
 
 `by` says which label and which key the receipt uses. `head.entry` is
 the entry hash at `head.seq`.
@@ -1213,7 +1230,7 @@ Each slot is one or more cases with an expected verdict.
 | `quorum-majority` | 2 of 5 not approved, 3 of 5 approved. |
 | `quorum-all` | 3 of 4 not approved. |
 | `quorum-rule-absent` | `group.delegate` with no `delegate` rule. Rejected. |
-| `found-quorum` | Founding with a listed member unsigned. Rejected. |
+| `found-quorum` | One owner, one key, `1 of owner`. Accepted. Three owners, `2 of owner`, all signed. Accepted. A listed member unsigned. Rejected. `2 of owner` with one owner. Rejected. |
 | `policy-root` | An admin under `policy: 1 of admin` rewrites a stricter `delegate` rule, then delegates alone. Accepted. Owners lower their own threshold. Accepted. |
 | `role-key-guard` | Admin mints an owner, drops an owner, re-keys an owner. Each rejected. Owners re-key an owner who lost a key. Accepted. |
 | `lockout-guard` | A role left with no holder, `k` of zero, `k` above the holders, a removal that strands a rule. Each rejected. |
@@ -1257,6 +1274,7 @@ Each slot is one or more cases with an expected verdict.
 | `threshold-form-unknown` | A `k` that is not a number, `majority`, or `all`. Rejected. |
 | `unreadable-established` | An unknown kind at sequence 3, approved under `policy` and settled. State at 2, nothing authorized, and still nothing when later given the shorter log with a fresh head. A grant standing at 2 is refused. |
 | `unreadable-not-established` | The same entry with no witness receipt, and with approvals below the `policy` rule. Rejected as evidence, nothing stored, and a later valid entry at that sequence is accepted. |
+| `unreadable-rival` | An established unreadable entry as a rival beside a readable settled entry at the same sequence. Unsupported, stored, in both delivery orders. It is not ignored as a failed rival and is not a conflict. |
 | `unreadable-policy` | A policy entry with an unknown `settle` value and an undefined key. Unreadable, not malformed. An unknown `visibility` likewise. |
 | `anchor-adoption` | An established policy entry at sequence 5 with another `anchor` value. Stops at 4, stored, nothing authorized. |
 | `limits` | 65 signatures by old keys, 17 added keys, a founding roster of 17 keys, of 64, of 65, an entry over 65,536 bytes. A removed key still approves. |
