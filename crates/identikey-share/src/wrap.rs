@@ -1,6 +1,7 @@
 //! Keyspace v1 KEK wrap of a 32-byte key.
 //!
-//! `k = blake3("identikey-keyspace-v1-wrap" || dh || ephemeral || recipient)`.
+//! `k = blake3::derive_key(context, dh || ephemeral || recipient)`, where the
+//! context string names the wrap algorithm (keyspace v1 §7.1).
 //! The wrapped key is XChaCha20-Poly1305 under `k`. Ed25519 recipients are
 //! converted to X25519 with the RFC 7748 birational map. Post-quantum KEMs
 //! are not a v1 wrap.
@@ -18,7 +19,10 @@ use zeroize::{Zeroize, Zeroizing};
 
 use crate::error::ShareError;
 
-const WRAP_LABEL: &[u8] = b"identikey-keyspace-v1-wrap";
+/// BLAKE3 key-derivation contexts, one per wrap algorithm. Hardcoded, per
+/// `docs/standards/key-derivation.md`.
+const KDF_CONTEXT_X25519: &str = "identikey keyspace-v1 wrap key x25519-xchacha20poly1305";
+const KDF_CONTEXT_P256: &str = "identikey keyspace-v1 wrap key p256-xchacha20poly1305";
 const ALG_X25519: &str = "x25519-xchacha20poly1305";
 const ALG_P256: &str = "p256-xchacha20poly1305";
 
@@ -428,7 +432,7 @@ fn seal_x25519(
         dh.zeroize();
         return Err(ShareError::Wrap);
     }
-    let mut key = wrap_kdf(&dh, ephemeral_pub, recipient);
+    let mut key = wrap_kdf(KDF_CONTEXT_X25519, &dh, ephemeral_pub, recipient);
     dh.zeroize();
     let cipher = XChaCha20Poly1305::new((&*key).into());
     let ciphertext = cipher
@@ -457,7 +461,7 @@ fn seal_p256(
         }
         let mut dh = [0u8; 32];
         dh.copy_from_slice(raw.as_slice());
-        let key = wrap_kdf(&dh, &ephemeral, recipient);
+        let key = wrap_kdf(KDF_CONTEXT_P256, &dh, &ephemeral, recipient);
         dh.zeroize();
         key
     };
@@ -494,7 +498,7 @@ fn dh_kdf_x25519(
         dh.zeroize();
         return Err(ShareError::Wrap);
     }
-    let key = wrap_kdf(&dh, ephemeral_or_peer, recipient);
+    let key = wrap_kdf(KDF_CONTEXT_X25519, &dh, ephemeral_or_peer, recipient);
     dh.zeroize();
     Ok(key)
 }
@@ -513,21 +517,22 @@ fn dh_kdf_p256(
     }
     let mut dh = [0u8; 32];
     dh.copy_from_slice(raw.as_slice());
-    let key = wrap_kdf(&dh, ephemeral, recipient);
+    let key = wrap_kdf(KDF_CONTEXT_P256, &dh, ephemeral, recipient);
     dh.zeroize();
     Ok(key)
 }
 
-fn wrap_kdf(dh: &[u8; 32], ephemeral: &[u8], recipient: &[u8]) -> Zeroizing<[u8; 32]> {
-    let mut material =
-        Vec::with_capacity(WRAP_LABEL.len() + 32 + ephemeral.len() + recipient.len());
-    material.extend_from_slice(WRAP_LABEL);
-    material.extend_from_slice(dh);
-    material.extend_from_slice(ephemeral);
-    material.extend_from_slice(recipient);
-    let hash = blake3::hash(&material);
-    material.zeroize();
-    Zeroizing::new(*hash.as_bytes())
+fn wrap_kdf(
+    context: &str,
+    dh: &[u8; 32],
+    ephemeral: &[u8],
+    recipient: &[u8],
+) -> Zeroizing<[u8; 32]> {
+    let mut hasher = blake3::Hasher::new_derive_key(context);
+    hasher.update(dh);
+    hasher.update(ephemeral);
+    hasher.update(recipient);
+    Zeroizing::new(*hasher.finalize().as_bytes())
 }
 
 pub(crate) fn is_small_order(point: &[u8; 32]) -> bool {
@@ -548,6 +553,41 @@ fn ed25519_seed_to_x25519(seed: &[u8; 32]) -> [u8; 32] {
 
 #[cfg(test)]
 mod tests {
+    /// Known answer for §7.1. identikey-core carries the same vector.
+    #[test]
+    fn wrap_kdf_known_answer() {
+        let x = super::wrap_kdf(
+            super::KDF_CONTEXT_X25519,
+            &[0x11; 32],
+            &[0x22; 32],
+            &[0x33; 32],
+        );
+        let p = super::wrap_kdf(
+            super::KDF_CONTEXT_P256,
+            &[0x11; 32],
+            &[0x22; 33],
+            &[0x33; 33],
+        );
+        assert_eq!(
+            hex(&x[..]),
+            "ad799ab492b0d6c54e41260bd866c433f0f3072b0b7fa3a77cca58c6731c8d76"
+        );
+        assert_eq!(
+            hex(&p[..]),
+            "1a3284a25b59ec9365ad2f52906b624dc16e77e91f8623b8df38e795070f4ad4"
+        );
+        // Not the pre-derive_key construction.
+        let mut old = b"identikey-keyspace-v1-wrap".to_vec();
+        old.extend_from_slice(&[0x11; 32]);
+        old.extend_from_slice(&[0x22; 32]);
+        old.extend_from_slice(&[0x33; 32]);
+        assert_ne!(&x[..], blake3::hash(&old).as_bytes());
+    }
+
+    fn hex(bytes: &[u8]) -> String {
+        bytes.iter().map(|b| format!("{b:02x}")).collect()
+    }
+
     use super::*;
 
     #[test]

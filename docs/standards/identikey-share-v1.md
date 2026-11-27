@@ -20,8 +20,9 @@ of the same DEK:
 
 - **Direct.** Keyspace §7 to an X25519 u-coordinate, to the RFC 7748 Montgomery
   image of an Ed25519 verifying key, or to a compressed P-256 point. The KEK
-  is the Blake3 of the ECDH shared secret, the ephemeral public key, and the
-  recipient, under the label `identikey-keyspace-v1-wrap`.
+  is derived with BLAKE3 in key-derivation mode from the ECDH shared secret,
+  the ephemeral public key, and the recipient, under the context string
+  keyspace §7.1 gives for the wrap algorithm.
 - **Recrypt.** An opaque `recrypt-pre` capsule of that same DEK. A backend
   such as Recrypt encapsulates, decapsulates, and transforms it. This spec
   does not define the PRE ciphertext.

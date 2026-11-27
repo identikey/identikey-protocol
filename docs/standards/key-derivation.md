@@ -50,20 +50,25 @@ Say which exception applies in the standard that makes the choice.
 
 ## Hierarchical keys
 
-IdentiKey has no hierarchical (HD) key generation today. If it is
-added, note one limit before choosing this mode for it: BLAKE3
+No IdentiKey code generates hierarchical (HD) keys today. One proposal
+exists and was never built: `ik:v1`, in the `tools` repo at
+`docs/architecture/hd-key-hierarchy-ik-v1.md` (2025), which derives
+hardened Ed25519 and X25519 branches from one seed with HKDF-SHA512.
+If HD keys are built, that proposal is revisited under this convention.
+Note one limit before choosing this mode for it: BLAKE3
 derivation is one-way from a secret. It gives the equivalent of BIP32
 hardened children only. Deriving a child public key from a parent
 public key, without the secret, needs a different construction.
 
 ## Existing derivations, as of 2026-11-27
 
-These are not changed by this note. Each is fixed by a wire or by
-values already issued.
+IdentiKey is pre-alpha. A wire can still change, and this is the time
+to change it. The wrap key was moved to this convention on 2026-11-27.
+The rest stay, each for the reason given.
 
-| Where | Construction | Why it stays |
+| Where | Construction | Status |
 |---|---|---|
-| Keyspace v1 and share v1 wrap key (`identikey-share`, and the copy in identikey-core `identikey-keys`) | `blake3("identikey-keyspace-v1-wrap" \|\| dh \|\| ephemeral \|\| recipient)`, a plain hash | Frozen keyspace v1 wire. A successor wrap should use `derive_key`. |
+| Keyspace v1 and share v1 wrap key (`identikey-share`, and the copy in identikey-core `identikey-keys`) | `derive_key`, one context per wrap algorithm (keyspace v1 §7.1) | Follows this convention. Was a plain BLAKE3 hash of a label and the inputs. |
 | Pairwise OIDC `sub` (identikey-core `identikey-oidc`) | HKDF-SHA-256 over the pairwise salt, the sector, and the XID | Changing it changes every relying party's `sub` for every user. |
 | Wallet file key (`identikey-wallet`) | Argon2id from a password | Password input. Correct as it is. |
 | OP password store (identikey-core) | Argon2id | Password hashing. Correct as it is. |

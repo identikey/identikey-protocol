@@ -206,10 +206,33 @@ No HPKE. No PQ wrap in v1. An unknown `alg` is not a successful unwrap.
 
 ```
 dh = ECDH(ephemeral_sk, recipient_pk)
-k  = blake3(
-       "identikey-keyspace-v1-wrap" || dh || ephemeral || recipient
-     )[0:32]
+k  = BLAKE3-derive-key( context, dh || ephemeral || recipient )
 ```
+
+`k` is the 32-byte output of BLAKE3 in key-derivation mode
+(`blake3::derive_key`). `context` is fixed by the wrap `alg`:
+
+| `alg` | `context` (UTF-8, no terminator) |
+|---|---|
+| `x25519-xchacha20poly1305` | `identikey keyspace-v1 wrap key x25519-xchacha20poly1305` |
+| `p256-xchacha20poly1305` | `identikey keyspace-v1 wrap key p256-xchacha20poly1305` |
+
+`dh` is 32 bytes. `ephemeral` and `recipient` are the bytes carried in
+the wrap: 32 each for X25519, 33 each for P-256. The lengths are fixed
+per `alg`, so the concatenation needs no separators.
+
+Known answer, with `dh` = 32 bytes of `0x11`, `ephemeral` all `0x22`,
+`recipient` all `0x33`:
+
+| `alg` | `k` (hex) |
+|---|---|
+| `x25519-xchacha20poly1305` | `ad799ab492b0d6c54e41260bd866c433f0f3072b0b7fa3a77cca58c6731c8d76` |
+| `p256-xchacha20poly1305` | `1a3284a25b59ec9365ad2f52906b624dc16e77e91f8623b8df38e795070f4ad4` |
+
+Changed 2026-11-27, before any release. Until then `k` was a plain
+BLAKE3 hash of the label `identikey-keyspace-v1-wrap` and the same three
+inputs. A wrap sealed under the earlier construction does not open.
+The convention is in [`key-derivation.md`](key-derivation.md).
 
 Encrypt the PTK with XChaCha20-Poly1305, key `k`, nonce 24 bytes.
 Ciphertext is ciphertext ‖ 16-byte tag.
